@@ -33,6 +33,8 @@ export function EditorialHeader({
   const [mounted, setMounted] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
@@ -49,13 +51,17 @@ export function EditorialHeader({
 
     // Check active Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.email) {
-        setUserEmail(session.user.email);
+      if (session?.user) {
+        setUserEmail(session.user.email || null);
+        setUserAvatar(session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null);
+        setUserName(session.user.user_metadata?.full_name || session.user.user_metadata?.name || null);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUserEmail(session?.user?.email || null);
+      setUserAvatar(session?.user?.user_metadata?.avatar_url || session?.user?.user_metadata?.picture || null);
+      setUserName(session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || null);
     });
 
     return () => {
@@ -66,6 +72,8 @@ export function EditorialHeader({
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUserEmail(null);
+    setUserAvatar(null);
+    setUserName(null);
   };
 
   const toggleTheme = () => {
@@ -141,9 +149,20 @@ export function EditorialHeader({
           </button>
 
           {userEmail ? (
-            <div className="flex items-center gap-2 pl-1 border-l border-[#e8e8e6] dark:border-[#222220]">
+            <div className="flex items-center gap-2 pl-2 border-l border-[#e8e8e6] dark:border-[#222220]">
+              {userAvatar ? (
+                <img
+                  src={userAvatar}
+                  alt={userName || userEmail}
+                  className="w-5 h-5 rounded-full object-cover border border-[#e8e8e6] dark:border-[#333]"
+                />
+              ) : (
+                <div className="w-5 h-5 rounded-full bg-[#141413] dark:bg-[#f3f3f0] text-white dark:text-[#141413] text-[10px] flex items-center justify-center font-bold">
+                  {(userName || userEmail)[0].toUpperCase()}
+                </div>
+              )}
               <span className="text-xs text-[#141413] dark:text-[#f3f3f0] font-medium hidden md:inline truncate max-w-[130px]">
-                {userEmail}
+                {userName || userEmail}
               </span>
               <button
                 onClick={handleSignOut}
