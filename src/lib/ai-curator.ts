@@ -26,8 +26,8 @@ export async function transformWithAi(raw: {
 }): Promise<EditorialGenerationResult | null> {
   const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
 
-  if (!apiKey || apiKey.startsWith("AQ.")) {
-    // If no valid Gemini AI key is present, fallback to smart structured synthesis
+  if (!apiKey) {
+    // If no Gemini AI key is present, fallback to smart structured synthesis
     return fallbackEditorialSynthesizer(raw);
   }
 
@@ -64,7 +64,8 @@ Respond with ONLY valid JSON (no markdown formatting, no code blocks):
 }`;
 
   const endpoints = [
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
   ];
 
