@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#181817" />
+      <stop offset="100%" stop-color="#0a0a09" />
+    </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d4d4d0" />
+    </linearGradient>
+    <linearGradient id="emeraldPulse" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <filter id="subtleShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Outer Rounded Squircle -->
+  <rect width="128" height="128" rx="32" fill="url(#bgGrad)" />
+  <rect x="1" y="1" width="126" height="126" rx="31" stroke="#2c2c28" stroke-width="1.5" fill="none" />
+
+  <!-- Monogram & Waveform Emblem -->
+  <g transform="translate(24, 28)">
+    <!-- Stylized Lowercase 'a' with Editorial Serif Detailing -->
+    <path
+      d="M38 48 C38 58 29 64 19 64 C9 64 2 57 2 47 C2 36 10 31 23 30 L38 29 L38 24 C38 16 33 12 24 12 C16 12 10 15 7 20 L2 14 C7 7 15 4 25 4 C39 4 47 11 47 24 L47 52 C47 58 48 61 51 63 L44 64 C41 62 39 57 38 48 Z M38 37 L25 38 C16 39 11 42 11 48 C11 54 15 57 21 57 C31 57 38 50 38 40 L38 37 Z"
+      fill="url(#glowGrad)"
+      filter="url(#subtleShadow)"
+    />
+
+    <!-- Speech / Voice Frequency Bars (The 'talky' soundwave) -->
+    <!-- Bar 1 -->
+    <rect x="58" y="32" width="4.5" height="18" rx="2.25" fill="#a1a19a" />
+    <!-- Bar 2 (Taller center pulse) -->
+    <rect x="66" y="22" width="4.5" height="38" rx="2.25" fill="#ffffff" />
+    <!-- Bar 3 -->
+    <rect x="74" y="30" width="4.5" height="22" rx="2.25" fill="#a1a19a" />
+
+    <!-- Emerald Intelligence Node (Live Dot) -->
+    <circle cx="68" cy="10" r="4.5" fill="url(#emeraldPulse)" />
+  </g>
+</svg>

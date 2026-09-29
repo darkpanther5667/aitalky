@@ -46,6 +46,11 @@ export const metadata: Metadata = {
       "text/plain": "https://aitalky.vercel.app/llms.txt",
     },
   },
+  icons: {
+    icon: [{ url: "/logo-icon.svg", type: "image/svg+xml" }],
+    shortcut: "/logo-icon.svg",
+    apple: "/logo-icon.svg",
+  },
   openGraph: {
     title: "aitalky — Independent AI Journalism",
     description: "Factual, minimal reporting on artificial intelligence research, models, and policy.",
@@ -53,11 +58,13 @@ export const metadata: Metadata = {
     siteName: "aitalky",
     locale: "en_US",
     type: "website",
+    images: [{ url: "/logo.svg", width: 1200, height: 630, alt: "aitalky Logo" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "aitalky — News, Ideas & Analysis",
     description: "Independent artificial intelligence journalism. Updated every 30 minutes.",
+    images: ["/logo.svg"],
     creator: "@aitalkynews",
   },
 };
@@ -79,7 +86,7 @@ const organizationSchema = {
       "url": "https://aitalky.vercel.app",
       "logo": {
         "@type": "ImageObject",
-        "url": "https://aitalky.vercel.app/globe.svg",
+        "url": "https://aitalky.vercel.app/logo.svg",
       },
       "description":
         "An independent, minimal news publication covering artificial intelligence research, industry, models, and policy.",

@@ -8,6 +8,7 @@ import { Article } from "@/types/news";
 import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
 import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { ArticleActions } from "@/components/ArticleActions";
+import { Logo } from "@/components/Logo";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -221,13 +222,17 @@ export default async function NewsArticlePage({ params }: PageProps) {
         {/* Navigation Breadcrumb Bar */}
         <header className="border-b border-[#e8e8e6] dark:border-[#222220] py-3.5 px-4 sm:px-6">
           <div className="max-w-4xl mx-auto flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af]">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 hover:text-black dark:hover:text-white transition-colors font-medium"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Back to aitalky</span>
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-1.5 hover:text-black dark:hover:text-white transition-colors font-medium"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Back</span>
+              </Link>
+              <span className="text-neutral-300 dark:text-neutral-700 hidden sm:inline">•</span>
+              <Logo size="sm" showSubtitle={false} />
+            </div>
 
             <div className="flex items-center gap-2">
               <span className="uppercase tracking-wider font-semibold text-[#141413] dark:text-[#f3f3f0]">

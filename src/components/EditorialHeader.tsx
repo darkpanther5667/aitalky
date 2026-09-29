@@ -5,6 +5,7 @@ import { Category } from "@/types/news";
 import { Search, Sun, Moon, Bookmark, X, Volume2, User, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { AuthModal } from "@/components/AuthModal";
+import { Logo } from "@/components/Logo";
 
 interface EditorialHeaderProps {
   currentCategory: Category;
@@ -185,17 +186,8 @@ export function EditorialHeader({
       </div>
 
       {/* Main Masthead */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-center sm:text-left">
-          <a href="#" className="inline-block group">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-serif font-black tracking-tight text-[#141413] dark:text-[#f3f3f0] hover:opacity-90 transition-opacity">
-              aitalky
-            </h1>
-          </a>
-          <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] tracking-wide uppercase mt-1 font-sans">
-            The Front Page of Artificial Intelligence
-          </p>
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <Logo size="lg" />
 
         {/* Search Bar */}
         <div className="w-full sm:w-72 relative">
