@@ -10,7 +10,7 @@ import { StoryReaderModal } from "@/components/StoryReaderModal";
 import { TalkyAssistantModal } from "@/components/TalkyAssistantModal";
 import { AudioPlayerBar } from "@/components/AudioPlayerBar";
 import { speechManager } from "@/lib/speech";
-import { ArrowRight, Volume2, Bookmark, Sparkles } from "lucide-react";
+import { ArrowRight, Volume2, Bookmark, Sparkles, RotateCw } from "lucide-react";
 
 export default function HomePage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -21,6 +21,7 @@ export default function HomePage() {
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Load saved bookmarks from localStorage
   useEffect(() => {
@@ -43,21 +44,48 @@ export default function HomePage() {
     return unsub;
   }, []);
 
-  // Load live news feed
-  const loadFeeds = async () => {
+  // Load live news feed (with optional force bypass)
+  const loadFeeds = async (force: boolean = false) => {
+    setIsRefreshing(true);
     try {
-      const res = await fetch("/api/news");
+      const url = force ? "/api/news?refresh=true" : "/api/news";
+      const res = await fetch(url);
       if (res.ok) {
         const data: NewsFeedResponse = await res.json();
         setArticles(data.articles);
       }
     } catch (err) {
       console.error("Failed to load news", err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
     loadFeeds();
+
+    // Scheduled auto-refresh every 30 minutes
+    const interval = setInterval(() => {
+      loadFeeds();
+    }, 30 * 60 * 1000);
+
+    // Auto-refresh when user returns to tab after 15+ minutes of inactivity
+    let lastActive = Date.now();
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        const diffMinutes = (Date.now() - lastActive) / (1000 * 60);
+        if (diffMinutes >= 15) {
+          loadFeeds();
+        }
+        lastActive = Date.now();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   // Bookmark toggle
@@ -143,21 +171,48 @@ export default function HomePage() {
         isAudioPlaying={isAudioPlaying}
       />
 
-      {/* Breaking News Ticker Line */}
-      <div className="border-b border-[#e8e8e6] dark:border-[#222220] py-2 px-4 sm:px-6 bg-[#f4f4f2]/60 dark:bg-[#161614]/60 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center gap-3 overflow-hidden">
-          <span className="font-semibold text-black dark:text-white uppercase tracking-wider shrink-0 text-[11px]">
-            Latest Wire
-          </span>
-          <span className="text-neutral-300 dark:text-neutral-700">•</span>
-          <div className="flex items-center gap-6 overflow-x-auto whitespace-nowrap text-[#4b5563] dark:text-[#9ca3af] scrollbar-none">
-            <span>European Union finalizes research guidance for open-source AI</span>
-            <span>•</span>
-            <span>Data center energy demands spur clean utility agreements</span>
-            <span>•</span>
-            <span>Developers adopt autonomous multi-agent engineering workflows</span>
-            <span>•</span>
-            <span>Test-time search gains momentum across academic evaluations</span>
+      {/* Breaking News Ticker Line with 30-Minute Live Pulse */}
+      <div className="border-b border-[#e8e8e6] dark:border-[#222220] py-2 px-4 sm:px-6 bg-[#f4f4f2]/70 dark:bg-[#161614]/70 text-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-hidden">
+          <div className="flex items-center gap-3 overflow-hidden min-w-0">
+            <span className="font-semibold text-black dark:text-white uppercase tracking-wider shrink-0 text-[11px] flex items-center gap-1.5">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              Live Wire
+            </span>
+            <span className="text-neutral-300 dark:text-neutral-700 shrink-0">•</span>
+            <div className="flex items-center gap-6 overflow-x-auto whitespace-nowrap text-[#4b5563] dark:text-[#9ca3af] scrollbar-none">
+              {articles.length > 0 ? (
+                articles.slice(0, 6).map((art, idx) => (
+                  <button
+                    key={art.id || idx}
+                    onClick={() => setSelectedArticle(art)}
+                    className="hover:text-black dark:hover:text-white hover:underline transition text-left cursor-pointer shrink-0"
+                  >
+                    <span className="font-medium text-neutral-800 dark:text-neutral-200">[{art.source}]</span> {art.title}
+                  </button>
+                ))
+              ) : (
+                <span>Ingesting freshest AI developments across global labs...</span>
+              )}
+            </div>
+          </div>
+
+          <div className="shrink-0 flex items-center gap-2 pl-3 border-l border-[#e8e8e6] dark:border-[#222220]">
+            <span className="hidden sm:inline-block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              Syncs every 30m
+            </span>
+            <button
+              onClick={() => loadFeeds(true)}
+              disabled={isRefreshing}
+              title="Force sync freshest AI news"
+              className="flex items-center gap-1 text-[11px] font-medium text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition px-2 py-0.5 rounded bg-white/80 dark:bg-neutral-800/80 border border-[#e8e8e6] dark:border-[#2a2a28] cursor-pointer"
+            >
+              <RotateCw className={`w-3 h-3 ${isRefreshing ? "animate-spin text-black dark:text-white" : ""}`} />
+              <span>{isRefreshing ? "Syncing..." : "Sync"}</span>
+            </button>
           </div>
         </div>
       </div>

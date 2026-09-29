@@ -219,6 +219,41 @@ export async function upsertArticle(article: Article): Promise<void> {
 }
 
 export async function upsertArticles(articles: Article[]): Promise<void> {
+  if (!articles || articles.length === 0) return;
+
+  // 1. Fast batch upsert with Supabase REST API
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const payloads = articles.map((article) => ({
+      id: article.id,
+      slug: article.slug,
+      title: article.title,
+      summary: article.summary,
+      content: article.content || article.summary,
+      source: article.source,
+      source_url: article.sourceUrl || null,
+      url: article.url,
+      published_at: article.publishedAt,
+      category: article.category,
+      reading_time_minutes: article.readingTimeMinutes || 3,
+      author: article.author,
+      author_role: article.authorRole,
+      image_url: article.imageUrl,
+      tags: article.tags || [],
+      key_points: article.keyPoints || [],
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error } = await client
+      .from("articles")
+      .upsert(payloads, { onConflict: "slug" });
+
+    if (!error) return;
+  } catch (err) {
+    console.error("Batch upsert error, falling back to sequential:", err);
+  }
+
+  // 2. Fallback to sequential upsert
   for (const article of articles) {
     try {
       await upsertArticle(article);

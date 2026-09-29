@@ -18,10 +18,31 @@ const FEED_SOURCES: FeedSource[] = [
     type: "rss",
   },
   {
-    name: "VentureBeat AI",
-    url: "https://venturebeat.com/category/ai/feed/",
+    name: "Ars Technica AI",
+    url: "https://arstechnica.com/tag/ai/feed/",
     defaultCategory: "industry",
-    homepage: "https://venturebeat.com",
+    homepage: "https://arstechnica.com",
+    type: "rss",
+  },
+  {
+    name: "SiliconANGLE AI",
+    url: "https://siliconangle.com/category/ai/feed/",
+    defaultCategory: "industry",
+    homepage: "https://siliconangle.com",
+    type: "rss",
+  },
+  {
+    name: "MarkTechPost",
+    url: "https://www.marktechpost.com/feed/",
+    defaultCategory: "research",
+    homepage: "https://marktechpost.com",
+    type: "rss",
+  },
+  {
+    name: "Wired AI",
+    url: "https://www.wired.com/feed/tag/ai/latest/rss",
+    defaultCategory: "culture",
+    homepage: "https://wired.com",
     type: "rss",
   },
   {
@@ -260,7 +281,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
           : [parsed.feed.entry];
       }
 
-      return rawItems.slice(0, 6).map((item, idx) => {
+      return rawItems.slice(0, 10).map((item, idx) => {
         const rawTitle = typeof item.title === "string" ? item.title : item.title?.["#text"] || "News Update";
         const cleanTitle = cleanHtml(rawTitle).replace(/^\[.*?\]\s*/, "");
         const rawDesc = item.description || item.summary || item["content:encoded"] || item.content || "";
