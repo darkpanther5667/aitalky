@@ -17,6 +17,9 @@ export const metadata: Metadata = {
   title: "aitalky — News, Ideas & Analysis",
   description:
     "An independent, minimal news publication covering the developments, people, and culture of artificial intelligence.",
+  verification: {
+    google: "MS-CkGF-hTsPLdqFwWe67vGvlYhWA1ZoUYXxnJqt2yI",
+  },
 };
 
 export const viewport: Viewport = {
