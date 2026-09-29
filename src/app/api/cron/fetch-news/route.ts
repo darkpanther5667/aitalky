@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLiveNews } from "@/lib/rss-sources";
-import { upsertArticles, getDbArticles } from "@/lib/db";
+import { upsertArticles } from "@/lib/db";
+import { curateAndPublishStory } from "@/lib/ai-curator";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 60; // Allow sufficient time for all RSS feeds
+export const maxDuration = 60; // Allow sufficient time for AI rewriting and RSS feeds
 
 const VALID_CRON_SECRET = process.env.CRON_SECRET || "aitalky-cron-30min-key";
 
@@ -18,7 +19,6 @@ function isAuthorized(request: NextRequest): boolean {
   if (key && key === VALID_CRON_SECRET) {
     return true;
   }
-  // Vercel Cron automatically includes header: x-vercel-cron
   if (request.headers.get("x-vercel-cron")) {
     return true;
   }
@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
 async function handleSync(request: NextRequest) {
   const startTime = Date.now();
 
-  // Validate authorization
   if (!isAuthorized(request)) {
     return NextResponse.json(
       { error: "Unauthorized. Provide valid Bearer token or ?key= query parameter." },
@@ -45,25 +44,46 @@ async function handleSync(request: NextRequest) {
   }
 
   try {
-    console.log(`[Cron 30m] Starting scheduled AI news ingestion at ${new Date().toISOString()}`);
+    console.log(`[Cron 30m AI Editor] Starting automated news discovery & editorial processing at ${new Date().toISOString()}`);
 
-    // 1. Fetch fresh AI news from all feeds
+    // 1. Fetch fresh AI news across all monitored research and intelligence desks
     const articles = await fetchLiveNews();
-    console.log(`[Cron 30m] Fetched ${articles.length} AI articles from feeds`);
+    console.log(`[Cron 30m AI Editor] Fetched ${articles.length} AI items from feeds`);
 
-    // 2. Batch upsert into Supabase database
-    if (articles.length > 0) {
-      await upsertArticles(articles);
-      console.log(`[Cron 30m] Successfully synced ${articles.length} articles to Supabase`);
+    // 2. Run AI Senior Editor on top newest stories to synthesize executive takeaways and high-integrity prose
+    const aiProcessedTitles: string[] = [];
+    for (const art of articles.slice(0, 3)) {
+      try {
+        const published = await curateAndPublishStory({
+          title: art.title,
+          summary: art.summary,
+          content: art.content,
+          source: art.source,
+          sourceUrl: art.sourceUrl,
+          url: art.url,
+          publishedAt: art.publishedAt,
+          imageUrl: art.imageUrl,
+        });
+        if (published) {
+          aiProcessedTitles.push(published.title);
+        }
+      } catch (err) {
+        console.warn(`[Cron AI Curator] Failed to rewrite story: ${art.title}`, err);
+      }
     }
 
-    // 3. Revalidate homepage cache
+    // 3. Batch persist all articles to Supabase
+    if (articles.length > 0) {
+      await upsertArticles(articles);
+      console.log(`[Cron 30m AI Editor] Synced ${articles.length} articles to Supabase database`);
+    }
+
+    // 4. Revalidate cache
     try {
       revalidatePath("/");
       revalidatePath("/api/news");
-    } catch (revalidateErr) {
-      console.error("[Cron 30m] Revalidation error:", revalidateErr);
-    }
+      revalidatePath("/llms.txt");
+    } catch {}
 
     const durationMs = Date.now() - startTime;
 
@@ -72,15 +92,16 @@ async function handleSync(request: NextRequest) {
       timestamp: new Date().toISOString(),
       durationMs,
       articlesFetched: articles.length,
+      aiEditorEnhanced: aiProcessedTitles,
       sampleHeadlines: articles.slice(0, 3).map((a) => a.title),
-      message: `Successfully refreshed AI news feed every 30 minutes. ${articles.length} articles updated.`,
+      message: `AI Journalist pipeline successfully discovered, edited, and published news. ${articles.length} stories updated.`,
     });
   } catch (error: any) {
-    console.error("[Cron 30m] News sync failed:", error);
+    console.error("[Cron AI Editor] Sync error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: error.message || "Failed to sync AI news",
+        error: error.message || "Failed to execute AI news discovery and publishing",
         timestamp: new Date().toISOString(),
       },
       { status: 500 }
