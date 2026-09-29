@@ -14,11 +14,51 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
-  title: "aitalky — News, Ideas & Analysis",
+  metadataBase: new URL("https://aitalky.vercel.app"),
+  title: {
+    default: "aitalky — News, Ideas & Analysis in Artificial Intelligence",
+    template: "%s | aitalky",
+  },
   description:
-    "An independent, minimal news publication covering the developments, people, and culture of artificial intelligence.",
+    "An independent, minimal news publication covering the developments, people, research, and culture of artificial intelligence.",
+  keywords: [
+    "Artificial Intelligence",
+    "AI News",
+    "Machine Learning",
+    "LLMs",
+    "OpenAI",
+    "Anthropic",
+    "DeepSeek",
+    "AI Research",
+    "arXiv cs.AI",
+    "Generative AI",
+    "AI Policy",
+  ],
+  authors: [{ name: "aitalky Editorial Desk" }],
+  creator: "aitalky",
+  publisher: "aitalky",
   verification: {
     google: "MS-CkGF-hTsPLdqFwWe67vGvlYhWA1ZoUYXxnJqt2yI",
+  },
+  alternates: {
+    canonical: "https://aitalky.vercel.app",
+    types: {
+      "text/plain": "https://aitalky.vercel.app/llms.txt",
+    },
+  },
+  openGraph: {
+    title: "aitalky — Independent AI Journalism",
+    description: "Factual, minimal reporting on artificial intelligence research, models, and policy.",
+    url: "https://aitalky.vercel.app",
+    siteName: "aitalky",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "aitalky — News, Ideas & Analysis",
+    description: "Independent artificial intelligence journalism. Updated every 30 minutes.",
+    creator: "@aitalkynews",
   },
 };
 
@@ -26,6 +66,48 @@ export const viewport: Viewport = {
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fdfdfc" },
     { media: "(prefers-color-scheme: dark)", color: "#0d0d0c" },
+  ],
+};
+
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "NewsMediaOrganization",
+      "@id": "https://aitalky.vercel.app/#organization",
+      "name": "aitalky",
+      "url": "https://aitalky.vercel.app",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://aitalky.vercel.app/globe.svg",
+      },
+      "description":
+        "An independent, minimal news publication covering artificial intelligence research, industry, models, and policy.",
+      "knowsAbout": [
+        "Artificial Intelligence",
+        "Machine Learning",
+        "Large Language Models",
+        "Deep Learning",
+        "Neural Networks",
+        "AI Agents",
+        "Robotics",
+      ],
+      "publishingPrinciples": "https://aitalky.vercel.app",
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://aitalky.vercel.app/#website",
+      "url": "https://aitalky.vercel.app",
+      "name": "aitalky",
+      "publisher": {
+        "@id": "https://aitalky.vercel.app/#organization",
+      },
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://aitalky.vercel.app/?q={search_term_string}",
+        "query-input": "required name=search_term_string",
+      },
+    },
   ],
 };
 
@@ -40,6 +122,13 @@ export default function RootLayout({
       className={`${geistSans.variable} ${newsreader.variable} h-full antialiased`}
       suppressHydrationWarning
     >
+      <head>
+        <link rel="alternate" type="text/plain" href="https://aitalky.vercel.app/llms.txt" title="LLMs.txt" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans bg-[var(--background)] text-[var(--foreground)] transition-colors">
         {children}
       </body>

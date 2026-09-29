@@ -42,6 +42,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description: article.summary,
     alternates: {
       canonical: canonicalUrl,
+      types: {
+        "text/markdown": `${siteUrl}/api/llm/${article.slug}`,
+      },
+    },
+    other: {
+      "citation_title": article.title,
+      "citation_author": article.author,
+      "citation_publication_date": article.publishedAt.slice(0, 10),
+      "citation_online_date": article.publishedAt.slice(0, 10),
+      "citation_journal_title": "aitalky",
     },
     openGraph: {
       title: article.title,
@@ -151,7 +161,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
   const readingTimeMinutes = Math.max(2, Math.ceil(fullBody.split(" ").length / 180));
 
-  // Schema.org JSON-LD NewsArticle Structured Data for Google News SEO
+  const siteUrl = "https://aitalky.vercel.app";
+  const canonicalUrl = `${siteUrl}/news/${article.slug}`;
+
+  // Schema.org JSON-LD NewsArticle Structured Data for Google News & LLM Citation Engines
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
@@ -165,24 +178,33 @@ export default async function NewsArticlePage({ params }: PageProps) {
       {
         "@type": "Person",
         "name": article.author,
+        "jobTitle": article.authorRole || `${article.source} Correspondent`,
       }
     ],
     "publisher": {
       "@type": "NewsMediaOrganization",
       "name": "aitalky",
-      "url": "https://aitalky.news",
+      "url": siteUrl,
       "logo": {
         "@type": "ImageObject",
-        "url": "https://aitalky.news/logo.png"
+        "url": `${siteUrl}/globe.svg`
       }
     },
     "description": article.summary,
+    "articleBody": fullBody,
+    "isAccessibleForFree": true,
+    "inLanguage": "en-US",
+    "keywords": (article.tags || ["AI", "Artificial Intelligence", "Machine Learning"]).join(", "),
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": `https://aitalky.news/news/${article.slug}`
+      "@id": canonicalUrl,
     },
     "articleSection": article.category,
     "wordCount": fullBody.split(" ").length,
+    "speakable": {
+      "@type": "SpeakableSpecification",
+      "cssSelector": [".article-headline", ".article-takeaways"]
+    }
   };
 
   const paragraphs = fullBody.split("\n\n").filter((p) => p.trim().length > 0);
@@ -225,7 +247,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </div>
 
           {/* Headline */}
-          <h1 className="text-3xl sm:text-5xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-[1.15] mb-4">
+          <h1 className="article-headline text-3xl sm:text-5xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-[1.15] mb-4">
             {article.title}
           </h1>
 
@@ -290,9 +312,9 @@ export default async function NewsArticlePage({ params }: PageProps) {
             </figure>
           )}
 
-          {/* Key Bullet Takeaways */}
+          {/* Key Bullet Takeaways for Readers & LLMs */}
           {keyPoints && keyPoints.length > 0 && (
-            <div className="my-8 p-6 rounded-md bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#222220]">
+            <div className="article-takeaways my-8 p-6 rounded-md bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#222220]">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] dark:text-[#9ca3af] mb-3">
                 Key Points
               </h2>
@@ -308,7 +330,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
           )}
 
           {/* Full Narrative Multi-Paragraph Body */}
-          <div className="prose prose-neutral dark:prose-invert max-w-none font-serif text-lg sm:text-xl text-[#27272a] dark:text-[#e4e4e7] leading-relaxed space-y-6 my-8">
+          <div className="article-body prose prose-neutral dark:prose-invert max-w-none font-serif text-lg sm:text-xl text-[#27272a] dark:text-[#e4e4e7] leading-relaxed space-y-6 my-8">
             {paragraphs.map((para, idx) => (
               <p key={idx} className="leading-relaxed">
                 {para}
@@ -316,9 +338,21 @@ export default async function NewsArticlePage({ params }: PageProps) {
             ))}
           </div>
 
-          {/* Original Source Reference */}
-          <div className="mt-12 pt-6 border-t border-[#e8e8e6] dark:border-[#222220] flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af]">
-            <span>Published on {article.source}</span>
+          {/* Original Source Reference & LLM Markdown Link */}
+          <div className="mt-12 pt-6 border-t border-[#e8e8e6] dark:border-[#222220] flex flex-wrap items-center justify-between gap-4 text-xs text-[#6b7280] dark:text-[#9ca3af]">
+            <div className="flex items-center gap-3">
+              <span>Published on {article.source}</span>
+              <span className="text-neutral-300 dark:text-neutral-700">•</span>
+              <a
+                href={`/api/llm/${article.slug}`}
+                target="_blank"
+                rel="alternate"
+                type="text/markdown"
+                className="font-mono text-[11px] underline hover:text-black dark:hover:text-white"
+              >
+                Raw Markdown (for AI / LLMs)
+              </a>
+            </div>
             <a
               href={article.url}
               target="_blank"
