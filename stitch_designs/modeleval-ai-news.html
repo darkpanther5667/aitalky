@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_dashboard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&amp;family=JetBrains+Mono:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-error":"#690005","on-primary-fixed-variant":"#5516be","surface-dim":"#121318","on-tertiary-fixed":"#002113","surface-container-lowest":"#0d0e13","surface":"#121318","on-tertiary-fixed-variant":"#005236","inverse-primary":"#6d3bd7","secondary-container":"#03b5d3","on-secondary":"#003640","on-surface":"#e3e1e9","surface-variant":"#34343a","surface-container-high":"#292a2f","on-primary-fixed":"#23005c","tertiary-fixed":"#6ffbbe","tertiary-container":"#00a572","outline-variant":"#494454","primary-fixed":"#e9ddff","on-background":"#e3e1e9","surface-container":"#1e1f25","primary-fixed-dim":"#d0bcff","on-tertiary":"#003824","tertiary-fixed-dim":"#4edea3","background":"#121318","surface-tint":"#d0bcff","primary":"#d0bcff","on-primary":"#3c0091","on-primary-container":"#340080","inverse-surface":"#e3e1e9","secondary-fixed":"#acedff","error":"#ffb4ab","on-secondary-fixed":"#001f26","on-secondary-fixed-variant":"#004e5c","on-error-container":"#ffdad6","surface-bright":"#38393f","on-surface-variant":"#cbc3d7","inverse-on-surface":"#2f3036","secondary":"#4cd7f6","surface-container-highest":"#34343a","on-tertiary-container":"#00311f","outline":"#958ea0","secondary-fixed-dim":"#4cd7f6","surface-container-low":"#1a1b21","on-secondary-container":"#00424e","error-container":"#93000a","tertiary":"#4edea3","primary-container":"#a078ff"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"space-2xl":"2rem","gutter":"1rem","margin":"1.5rem","space-sm":"0.5rem","space-xxs":"0.125rem","gutter-dense":"0.5rem","space-xs":"0.25rem","space-md":"0.75rem","space-lg":"1rem","margin-mobile":"0.75rem","space-xl":"1.5rem"},fontFamily:{"body-base":["Geist"],"headline-sm":["Geist"],"body-dense":["Geist"],"display-lg":["Geist"],"headline-md":["Geist"],"display-lg-mobile":["Geist"],"stat-lg":["JetBrains Mono"],"label-code":["JetBrains Mono"],"body-mono":["JetBrains Mono"],"label-micro":["JetBrains Mono"],"stat-md":["JetBrains Mono"]},fontSize:{"body-base":["0.875rem",{"lineHeight":"1.375rem","letterSpacing":"-0.005em","fontWeight":"400"}],"headline-sm":["1.125rem",{"lineHeight":"1.5rem","letterSpacing":"-0.015em","fontWeight":"500"}],"body-dense":["0.8125rem",{"lineHeight":"1.25rem","letterSpacing":"-0.005em","fontWeight":"400"}],"display-lg":["2.25rem",{"lineHeight":"2.75rem","letterSpacing":"-0.03em","fontWeight":"600"}],"headline-md":["1.5rem",{"lineHeight":"2rem","letterSpacing":"-0.02em","fontWeight":"600"}],"display-lg-mobile":["1.75rem",{"lineHeight":"2.25rem","letterSpacing":"-0.02em","fontWeight":"600"}],"stat-lg":["1.75rem",{"lineHeight":"2rem","letterSpacing":"-0.02em","fontWeight":"600"}],"label-code":["0.75rem",{"lineHeight":"1rem","letterSpacing":"0.02em","fontWeight":"500"}],"body-mono":["0.8125rem",{"lineHeight":"1.25rem","letterSpacing":"0em","fontWeight":"400"}],"label-micro":["0.6875rem",{"lineHeight":"0.875rem","letterSpacing":"0.04em","fontWeight":"500"}],"stat-md":["1.25rem",{"lineHeight":"1.5rem","letterSpacing":"-0.01em","fontWeight":"600"}]}}}};</script></head><body class="bg-surface text-on-surface font-body-base text-body-base min-h-screen antialiased selection:bg-primary selection:text-on-primary"><aside class="fixed left-0 top-0 h-screen w-64 bg-surface-container-lowest flex flex-col justify-between z-50 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="flex flex-col"><div class="h-16 px-space-lg flex items-center justify-between bg-surface-container-low"><div class="flex items-center gap-space-sm"><img alt="ModelEval Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1Ue9kTw1aGde13tpzYFR0ROZ1cunPwEj2eGTZEtByDuZ8FAHxdQ7FTi7x1w6xDz-OSJ7vQY0lxL8-PDpQQySDHVdhBmWY8B4tW0jiLh4oYD50LcP_1ES2S4ANHGrbi6ai1rOD1d9f9STv7mw-PrBfqPT60Af_JG3Es7K6yEKvIwPpeh_7Mdp0W9emHn_ELPPsznZSMKEoB0MR_wEMD-Dicg-OYvg5BSVdGZH1QcA_gelmEKmaNpMOKeHCzO"/><span class="font-headline-sm text-headline-sm text-on-surface font-semibold tracking-tight">ModelEval</span></div><span class="inline-flex items-center px-space-xs py-space-xxs rounded bg-surface-container text-secondary text-label-micro font-label-micro uppercase font-medium">DISPATCH v2.4</span></div><div class="px-space-md py-space-sm text-label-micro font-label-micro text-outline uppercase tracking-wider">AI Newswire</div><nav class="flex flex-col gap-space-xxs px-space-sm" data-active-classes="bg-surface-container-high text-on-surface font-headline-sm rounded-lg"><a aria-current="page" class="flex items-center px-space-md py-space-sm transition-colors bg-surface-container-high text-on-surface font-headline-sm rounded-lg" data-path="latest-dispatches" href="#">Latest Dispatches</a><a class="flex items-center px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-dense text-body-dense" data-path="model-releases-weights" href="#">Model Releases &amp; Weights</a><a class="flex items-center px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-dense text-body-dense" data-path="research-papers-benchmarks" href="#">Research Papers &amp; Benchmarks</a><a class="flex items-center px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-dense text-body-dense" data-path="industry-infra-news" href="#">Industry &amp; Infra News</a><a class="flex items-center px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-dense text-body-dense" data-path="leaderboard-radar" href="#">Leaderboard / Radar</a><a class="flex items-center px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors font-body-dense text-body-dense" data-path="newsletter-rss" href="#">Newsletter / RSS</a></nav></div><div class="flex flex-col bg-surface-container-lowest p-space-md gap-space-md"><div class="bg-surface-container-low p-space-sm rounded-lg flex flex-col gap-space-xs"><div class="flex items-center justify-between text-label-micro font-label-micro text-outline"><span>LIVE TELEMETRY</span><span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-tertiary opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-tertiary"></span></span></div><div class="flex justify-between items-baseline"><span class="font-body-dense text-body-dense text-on-surface-variant">Status</span><span class="font-label-code text-label-code text-tertiary font-semibold">Live Feed Active</span></div><div class="flex justify-between items-baseline"><span class="font-body-dense text-body-dense text-on-surface-variant">News Index</span><span class="font-label-code text-label-code text-on-surface font-semibold">2,410 articles</span></div><div class="flex justify-between items-baseline"><span class="font-body-dense text-body-dense text-on-surface-variant">Sources</span><span class="font-label-code text-label-code text-secondary font-semibold">ArXiv, HF, GitHub</span></div></div><div class="flex flex-col gap-space-xs pt-space-xs"><a class="flex items-center justify-between px-space-xs py-space-xxs text-on-surface-variant hover:text-on-surface transition-colors font-body-dense text-body-dense" href="#"><span class="flex items-center gap-space-xs"><span class="material-symbols-outlined text-[16px]">rss_feed</span>Syndication API</span><span class="material-symbols-outlined text-[14px]">north_east</span></a><div class="flex items-center justify-between px-space-xs py-space-xxs"><div class="flex items-center gap-space-xs"><div class="w-2 h-2 rounded-full bg-tertiary"></div><span class="font-label-micro text-label-micro text-on-surface-variant">Dispatch Ingestion</span></div><span class="font-label-micro text-label-micro text-tertiary uppercase">Syncing</span></div></div></div></aside><div class="pl-64"><header class="fixed top-0 left-64 right-0 z-40 bg-surface-container-lowest/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 w-full px-space-xl flex items-center justify-between gap-space-lg"><div class="flex items-center gap-space-md flex-1 max-w-2xl"><div class="flex items-center w-full max-w-md h-9 bg-surface-container-low px-space-md rounded-lg gap-space-sm"><span class="material-symbols-outlined text-outline text-[18px]">search</span><input class="bg-transparent w-full text-on-surface placeholder:text-outline text-body-dense font-body-dense focus:outline-none" placeholder="Search dispatches, arXiv papers, weight drops..." spellcheck="false" type="text"/><kbd class="bg-surface-container-high text-on-surface-variant px-space-xs py-space-xxs rounded text-label-micro font-label-micro shadow-[0_1px_8px_rgba(0,0,0,0.04)]">⌘K</kbd></div><div class="hidden xl:flex items-center gap-space-xs"><button class="h-7 px-space-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface rounded-full text-label-micro font-label-micro flex items-center gap-space-xxs transition-colors"><span class="material-symbols-outlined text-[14px]">bolt</span>Breaking News</button><button class="h-7 px-space-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface rounded-full text-label-micro font-label-micro flex items-center gap-space-xxs transition-colors"><span class="material-symbols-outlined text-[14px]">biotech</span>Research</button><button class="h-7 px-space-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface rounded-full text-label-micro font-label-micro flex items-center gap-space-xxs transition-colors"><span class="material-symbols-outlined text-[14px]">download</span>Weights Drop</button><button class="h-7 px-space-sm bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface rounded-full text-label-micro font-label-micro flex items-center gap-space-xxs transition-colors"><span class="material-symbols-outlined text-[14px]">analytics</span>LLM Benchmarks</button></div></div><div class="flex items-center gap-space-md"><button class="relative h-9 w-9 flex items-center justify-center rounded-lg bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface transition-colors"><span class="material-symbols-outlined text-[20px]">notifications</span><span class="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-secondary"></span></button><div class="flex items-center gap-space-sm pl-space-sm"><div class="flex flex-col text-right"><span class="font-label-code text-label-code text-on-surface font-semibold">editorial-desk</span><span class="font-label-micro text-label-micro text-tertiary">RESEARCH DISPATCH</span></div><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">neurology</span></div></div></div></div></header><main class="w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full">
+<!-- Top Ticker Bar -->
+<div class="w-full bg-surface-container-lowest px-space-lg py-space-xs flex items-center overflow-hidden shadow-sm">
+<div class="flex items-center gap-space-xs text-primary shrink-0 mr-space-md">
+<span class="material-symbols-outlined text-[15px] animate-pulse">bolt</span>
+<span class="font-label-micro text-label-micro uppercase tracking-wider font-semibold text-primary">Live Wire</span>
+</div>
+<div class="flex items-center gap-space-xl overflow-x-auto whitespace-nowrap text-on-surface-variant font-label-code text-label-code py-space-xxs">
+<div class="flex items-center gap-space-xs">
+<span class="inline-flex w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+<span class="text-on-surface font-medium">BREAKING:</span>
+<span>DeepSeek releases R1-Zero weights under MIT License</span>
+</div>
+<span class="text-outline">/</span>
+<div class="flex items-center gap-space-xs">
+<span class="text-secondary font-medium">META AI:</span>
+<span>Early architectural hints suggest Llama 4 multi-modal MoE sparse routing</span>
+</div>
+<span class="text-outline">/</span>
+<div class="flex items-center gap-space-xs">
+<span class="text-tertiary font-medium">CHECKPOINT:</span>
+<span>Mistral opens Codestral 2501 checkpoint with 256k context window</span>
+</div>
+<span class="text-outline">/</span>
+<div class="flex items-center gap-space-xs">
+<span class="text-primary font-medium">ARXIV:</span>
+<span>Test-time compute scaling laws outscore o1-preview on SWE-bench verified</span>
+</div>
+</div>
+</div>
+<div class="px-space-xl py-space-lg flex flex-col gap-space-xl">
+<!-- Editorial Headline & Feed Meta -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-space-md">
+<div class="flex flex-col gap-space-xs max-w-3xl">
+<div class="flex items-center gap-space-xs text-label-micro font-label-micro text-secondary uppercase tracking-widest font-semibold">
+<span>Frontier Systems</span>
+<span>•</span>
+<span>Independent Telemetry</span>
+<span>•</span>
+<span class="text-tertiary">Live Epoch 2025.1</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-on-surface tracking-tight">ModelEval Dispatches &amp; News</h1>
+<p class="font-body-base text-body-base text-on-surface-variant">
+          Real-time dispatches, architecture teardowns, weight drops, and reproducible benchmark evaluations across frontier AI.
+        </p>
+</div>
+<!-- Quick Action Desk Hub -->
+<div class="flex items-center gap-space-sm shrink-0">
+<button class="h-8 px-space-md bg-surface-container-low hover:bg-surface-container-high text-on-surface text-label-code font-label-code rounded-lg flex items-center gap-space-xs transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-primary">rss_feed</span>
+<span>Feed / RSS</span>
+</button>
+<button class="h-8 px-space-md bg-primary-container text-on-primary font-headline-sm text-label-code rounded-lg flex items-center gap-space-xs transition-colors shadow-md hover:bg-primary">
+<span class="material-symbols-outlined text-[16px]">upload_file</span>
+<span>Submit News Tip</span>
+</button>
+</div>
+</div>
+<!-- Filter Ribbon & View Controls -->
+<div class="bg-surface-container-lowest p-space-sm rounded-xl flex flex-wrap items-center justify-between gap-space-md shadow-sm">
+<div class="flex flex-wrap items-center gap-space-xs">
+<button class="h-7 px-space-md rounded-full bg-surface-container-high text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-all shadow-sm">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span>All Dispatches</span>
+</button>
+<button class="h-7 px-space-md rounded-full bg-transparent hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-colors">
+<span>Weight Drops &amp; Checkpoints</span>
+</button>
+<button class="h-7 px-space-md rounded-full bg-transparent hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-colors">
+<span>Benchmark Teardowns</span>
+</button>
+<button class="h-7 px-space-md rounded-full bg-transparent hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-colors">
+<span>Research Papers (ArXiv)</span>
+</button>
+<button class="h-7 px-space-md rounded-full bg-transparent hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-colors">
+<span>Compute &amp; Infra</span>
+</button>
+<button class="h-7 px-space-md rounded-full bg-transparent hover:bg-surface-container text-on-surface-variant hover:text-on-surface font-body-dense text-body-dense flex items-center gap-space-xs transition-colors">
+<span>Open Source Policy</span>
+</button>
+</div>
+<div class="flex items-center gap-space-sm">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Sort:</span>
+<div class="flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1 rounded text-label-code font-label-code text-on-surface">
+<span>Latest (Real-time)</span>
+<span class="material-symbols-outlined text-[16px] text-outline">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Main Content Workspace (Split Layout) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Primary Editorial Desk (8 Cols) -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<!-- Large Hero Card: DeepSeek R1 Feature Story -->
+<article class="bg-surface-container-low rounded-xl overflow-hidden shadow-xl flex flex-col transition-all hover:bg-surface-container">
+<div class="relative w-full h-80 bg-surface-container-lowest overflow-hidden">
+<img class="w-full h-full object-cover opacity-85 mix-blend-luminosity hover:opacity-100 hover:mix-blend-normal transition-all duration-500" data-alt="High-density neural network architecture diagram depicting parallel reasoning paths, latent attention heads, and computational cluster matrix in neon purple and cyan lighting over deep black backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQEwB-8Irf7Xo8jwkgdbpo16fWFePHCg0NTOhIynK8DmYoAOMmVcZOIrKesBpXNuGxgDjdaNCnO1Np7QS6wtwgEPZi2Pj9dEMpvJa32V6DSYtFZSETFM9ayPtoEkGh7VkLIaUZ6w01tG4k2rhsoN8eqi5h423h0Fx7M5Q2buabBmQxqWn-K7cyxrTyAt_zANIdjrG9znFeN4ycgi6hbx7mbC9rv9Pg7W1nvErKuFu8mgqxqx22dJIsew"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-low via-surface-container-low/40 to-transparent"></div>
+<div class="absolute top-space-md left-space-md flex flex-wrap items-center gap-space-xs">
+<span class="h-6 px-space-sm rounded bg-primary text-on-primary font-label-micro text-label-micro uppercase font-bold tracking-wider flex items-center gap-space-xxs shadow-md">
+<span class="material-symbols-outlined text-[13px]">verified</span>
+                Exclusive Teardown
+              </span>
+<span class="h-6 px-space-sm rounded bg-surface-container-lowest/80 backdrop-blur-md text-secondary font-label-code text-label-code flex items-center gap-space-xxs">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                2 hours ago
+              </span>
+<span class="h-6 px-space-sm rounded bg-surface-container-lowest/80 backdrop-blur-md text-on-surface-variant font-label-code text-label-code">
+                12 min read
+              </span>
+</div>
+<div class="absolute bottom-space-md left-space-md right-space-md flex items-center justify-between text-on-surface-variant font-label-micro text-label-micro">
+<span class="text-primary-fixed-dim font-body-dense text-body-dense flex items-center gap-space-xxs">
+<span class="material-symbols-outlined text-[16px] text-primary">person_outline</span>
+                By Dr. Elena Vance (Evaluation Lead)
+              </span>
+<span class="font-label-code text-label-code text-tertiary">REPRODUCIBILITY SCORE: 98.4%</span>
+</div>
+</div>
+<div class="p-space-lg flex flex-col gap-space-md">
+<h2 class="font-headline-md text-headline-md text-on-surface hover:text-primary transition-colors cursor-pointer leading-tight">
+              DeepSeek-R1 Architecture Deep-Dive: Multi-Stage RL Without Supervised Fine-Tuning &amp; What the Benchmarks Actually Prove
+            </h2>
+<p class="font-body-base text-body-base text-on-surface-variant">
+              A granular examination of the pure reinforcement learning pipeline, the emergence of chain-of-thought behaviors, and independent replication data across AIME 2024 and SWE-bench verified. Our cluster test runs demonstrate 83.2% sample efficiency compared to dense fine-tuned checkpoints.
+            </p>
+<!-- Inline Benchmark Mini-Widget -->
+<div class="bg-surface-container p-space-md rounded-lg flex flex-col gap-space-sm shadow-inner">
+<div class="flex items-center justify-between">
+<span class="font-label-micro text-label-micro uppercase tracking-wider text-outline">ModelEval Independent Replication Verification</span>
+<span class="font-label-code text-label-code text-secondary font-semibold">Zero Data Contamination Verified</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-space-md pt-space-xs">
+<!-- Stat 1 -->
+<div class="flex flex-col bg-surface-container-lowest p-space-sm rounded">
+<div class="flex justify-between items-center text-label-micro font-label-micro text-outline mb-1">
+<span>MMLU-PRO (ACC)</span>
+<span class="text-tertiary font-bold">+6.2% vs o1</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-stat-lg text-stat-lg text-on-surface">84.4%</span>
+<span class="text-label-micro font-label-micro text-outline">zero-shot CoT</span>
+</div>
+<div class="w-full bg-surface-variant h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 84.4%"></div>
+</div>
+</div>
+<!-- Stat 2 -->
+<div class="flex flex-col bg-surface-container-lowest p-space-sm rounded">
+<div class="flex justify-between items-center text-label-micro font-label-micro text-outline mb-1">
+<span>AIME 2024 (PASS@1)</span>
+<span class="text-tertiary font-bold">+1.4% vs SOTA</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-stat-lg text-stat-lg text-on-surface">79.8%</span>
+<span class="text-label-micro font-label-micro text-outline">test-time budget</span>
+</div>
+<div class="w-full bg-surface-variant h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-secondary h-full rounded-full" style="width: 79.8%"></div>
+</div>
+</div>
+<!-- Stat 3 -->
+<div class="flex flex-col bg-surface-container-lowest p-space-sm rounded">
+<div class="flex justify-between items-center text-label-micro font-label-micro text-outline mb-1">
+<span>CODEFORCES ELO</span>
+<span class="text-secondary font-bold">Percentile</span>
+</div>
+<div class="flex items-baseline gap-space-xs">
+<span class="font-stat-lg text-stat-lg text-on-surface">96.3%</span>
+<span class="text-label-micro font-label-micro text-outline">2,029 Rating</span>
+</div>
+<div class="w-full bg-surface-variant h-1.5 rounded-full mt-2 overflow-hidden">
+<div class="bg-tertiary h-full rounded-full" style="width: 96.3%"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Tags & Interactions -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-space-xs py-space-xxs rounded bg-surface-container-high text-primary font-label-code text-label-code">#ReasoningModels</span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container-high text-secondary font-label-code text-label-code">#OpenWeights</span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container-high text-on-surface-variant font-label-code text-label-code">#RLArchitecture</span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container-high text-tertiary font-label-code text-label-code">#BenchmarkAudit</span>
+</div>
+<div class="flex items-center gap-space-md text-on-surface-variant font-label-code text-label-code">
+<button class="flex items-center gap-space-xxs hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[16px]">bookmark_border</span>
+<span>Save</span>
+</button>
+<button class="flex items-center gap-space-xxs hover:text-secondary transition-colors">
+<span class="material-symbols-outlined text-[16px]">share</span>
+<span>Artifacts (4)</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Secondary Articles Matrix (2x2 Grid) -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Article 1: Llama-3.3 70B -->
+<article class="bg-surface-container-low p-space-md rounded-xl shadow-md hover:bg-surface-container transition-all flex flex-col justify-between gap-space-sm">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-tertiary font-label-micro text-label-micro font-semibold uppercase">
+                  Audit Repack
+                </span>
+<span class="text-label-code font-label-code text-outline">4h ago</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface hover:text-primary cursor-pointer line-clamp-2">
+                Meta Llama-3.3 70B Benchmark Retest: Does 70B Match 405B Performance in Real-World Code Generation?
+              </h3>
+<p class="font-body-dense text-body-dense text-on-surface-variant line-clamp-3">
+                Synthetic code distillation claims analyzed across 4,200 human evaluation samples. Performance delta remains within 1.2% while reducing VRAM requirements by 82%.
+              </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline">
+<span>CodeEval Match Rate</span>
+<span class="text-on-surface font-label-code text-label-code">98.1% Parity</span>
+</div>
+<div class="flex items-center gap-space-xs pt-space-xxs">
+<span class="text-label-micro font-label-micro text-outline">Meta AI</span>
+<span class="text-outline">•</span>
+<span class="text-label-micro font-label-micro text-outline">Open Weights</span>
+<span class="text-outline">•</span>
+<span class="text-label-micro font-label-micro text-outline">CodeEval</span>
+</div>
+</div>
+</article>
+<!-- Article 2: Test-Time Compute -->
+<article class="bg-surface-container-low p-space-md rounded-xl shadow-md hover:bg-surface-container transition-all flex flex-col justify-between gap-space-sm">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-primary font-label-micro text-label-micro font-semibold uppercase">
+                  ArXiv Analysis
+                </span>
+<span class="text-label-code font-label-code text-outline">7h ago</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface hover:text-primary cursor-pointer line-clamp-2">
+                The Shift to Test-Time Compute: How System 2 Reasoning is Rewriting AI Evaluation Benchmarks
+              </h3>
+<p class="font-body-dense text-body-dense text-on-surface-variant line-clamp-3">
+                Fixed-token benchmarks are officially deprecated. Why dynamic rollout search and verification networks require entirely new evaluation frameworks.
+              </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline">
+<span>Tokens per Correct Pass</span>
+<span class="text-secondary font-label-code text-label-code">4.2x Expansion</span>
+</div>
+<div class="flex items-center gap-space-xs pt-space-xxs">
+<span class="text-label-micro font-label-micro text-outline">Inference Scaling</span>
+<span class="text-outline">•</span>
+<span class="text-label-micro font-label-micro text-outline">SWE-Bench</span>
+</div>
+</div>
+</article>
+<!-- Article 3: Mistral Large 2.1 -->
+<article class="bg-surface-container-low p-space-md rounded-xl shadow-md hover:bg-surface-container transition-all flex flex-col justify-between gap-space-sm">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-secondary font-label-micro text-label-micro font-semibold uppercase">
+                  Checkpoint Drop
+                </span>
+<span class="text-label-code font-label-code text-outline">9h ago</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface hover:text-primary cursor-pointer line-clamp-2">
+                Mistral Large 2.1 Released: Enhanced Function Calling, 128k Context Window, and European Enterprise Benchmarks
+              </h3>
+<p class="font-body-dense text-body-dense text-on-surface-variant line-clamp-3">
+                Comprehensive benchmarking of JSON multi-turn outputs, multilingual accuracy across French, German, Spanish, and latency deltas under vLLM v0.6.3.
+              </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline">
+<span>Tool Calling Success</span>
+<span class="text-tertiary font-label-code text-label-code">94.8% (+5.1%)</span>
+</div>
+<div class="flex items-center gap-space-xs pt-space-xxs">
+<span class="text-label-micro font-label-micro text-outline">Mistral AI</span>
+<span class="text-outline">•</span>
+<span class="text-label-micro font-label-micro text-outline">Weights Drop</span>
+</div>
+</div>
+</article>
+<!-- Article 4: GPU Cluster Telemetry -->
+<article class="bg-surface-container-low p-space-md rounded-xl shadow-md hover:bg-surface-container transition-all flex flex-col justify-between gap-space-sm">
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-error font-label-micro text-label-micro font-semibold uppercase">
+                  Infra &amp; Economics
+                </span>
+<span class="text-label-code font-label-code text-outline">11h ago</span>
+</div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface hover:text-primary cursor-pointer line-clamp-2">
+                GPU Cluster Telemetry: Training Cost Breakdown for Frontier MoE Models in Q1 2025
+              </h3>
+<p class="font-body-dense text-body-dense text-on-surface-variant line-clamp-3">
+                A hard audit of H100 vs H200 cluster utilization rates, InfiniBand switch failures, and estimated token-per-dollar ratios during 100B+ parameter runs.
+              </p>
+</div>
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline">
+<span>MFU (Model Flops Util)</span>
+<span class="text-on-surface font-label-code text-label-code">46.8% Average</span>
+</div>
+<div class="flex items-center gap-space-xs pt-space-xxs">
+<span class="text-label-micro font-label-micro text-outline">Compute &amp; Infra</span>
+<span class="text-outline">•</span>
+<span class="text-label-micro font-label-micro text-outline">Hardware</span>
+</div>
+</div>
+</article>
+</div>
+<!-- Inline Audio/Discussions Section Banner -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl flex items-center justify-between shadow-sm">
+<div class="flex items-center gap-space-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[28px]">graphic_eq</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">ModelEval Audio Dispatch #42</span>
+<span class="font-body-dense text-body-dense text-on-surface-variant">Discussing DeepSeek RL distillation tricks with Dr. Elena Vance &amp; Dr. Aris Thorne (34 mins)</span>
+</div>
+</div>
+<button class="h-8 px-space-md bg-surface-container-high hover:bg-surface-bright text-on-surface font-label-code text-label-code rounded-lg flex items-center gap-space-xs transition-colors">
+<span class="material-symbols-outlined text-[16px] text-tertiary">play_arrow</span>
+<span>Listen</span>
+</button>
+</div>
+</div>
+<!-- Right Column: Live Telemetry & Feeds (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Live Model Release Wire -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col gap-space-md shadow-md">
+<div class="flex items-center justify-between pb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-tertiary">stream</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Model Release Wire</h2>
+</div>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-tertiary font-label-micro text-label-micro font-semibold uppercase">Auto-polling</span>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Wire Item 1 -->
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-space-xxs hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between text-label-micro font-label-micro">
+<span class="text-tertiary font-semibold flex items-center gap-space-xxs">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                  14m ago
+                </span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-secondary text-label-micro font-label-micro">HuggingFace</span>
+</div>
+<span class="font-headline-sm text-body-base text-on-surface font-medium leading-snug">Qwen2.5-Coder-32B-Instruct v2 checkpoint published</span>
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline pt-space-xxs">
+<span>License: Apache 2.0</span>
+<span class="text-on-surface-variant font-label-code text-label-code">65.2 GB Weights</span>
+</div>
+</div>
+<!-- Wire Item 2 -->
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-space-xxs hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between text-label-micro font-label-micro">
+<span class="text-on-surface-variant flex items-center gap-space-xxs">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  42m ago
+                </span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-primary text-label-micro font-label-micro">Allen AI</span>
+</div>
+<span class="font-headline-sm text-body-base text-on-surface font-medium leading-snug">OLMo-2 13B released with full pre-training dataset logs</span>
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline pt-space-xxs">
+<span>Open Data &amp; Logs</span>
+<span class="text-on-surface-variant font-label-code text-label-code">Dolma V2 Batch</span>
+</div>
+</div>
+<!-- Wire Item 3 -->
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-space-xxs hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between text-label-micro font-label-micro">
+<span class="text-on-surface-variant flex items-center gap-space-xxs">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  1h ago
+                </span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-secondary text-label-micro font-label-micro">Google DeepMind</span>
+</div>
+<span class="font-headline-sm text-body-base text-on-surface font-medium leading-snug">Distillation of multi-turn tool use in Gemma-2 architecture</span>
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline pt-space-xxs">
+<span>ArXiv:2501.09841</span>
+<span class="text-on-surface-variant font-label-code text-label-code">PDF + Eval Suite</span>
+</div>
+</div>
+<!-- Wire Item 4 -->
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-space-xxs hover:bg-surface-container-high transition-colors">
+<div class="flex items-center justify-between text-label-micro font-label-micro">
+<span class="text-on-surface-variant flex items-center gap-space-xxs">
+<span class="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                  3h ago
+                </span>
+<span class="px-space-xs py-space-xxs rounded bg-surface-container text-tertiary text-label-micro font-label-micro">Cohere</span>
+</div>
+<span class="font-headline-sm text-body-base text-on-surface font-medium leading-snug">Command R+ fine-tuning weights added for multilingual RAG</span>
+<div class="flex items-center justify-between text-label-micro font-label-micro text-outline pt-space-xxs">
+<span>Enterprise API</span>
+<span class="text-on-surface-variant font-label-code text-label-code">128k Multi-Doc</span>
+</div>
+</div>
+</div>
+<button class="w-full h-8 bg-surface-container hover:bg-surface-container-high text-on-surface font-label-code text-label-code rounded flex items-center justify-center gap-space-xs transition-colors">
+<span>View All Weight Drops</span>
+<span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+<!-- Benchmark Radar & Weekly SOTA Movers -->
+<div class="bg-surface-container-low rounded-xl p-space-md flex flex-col gap-space-md shadow-md">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-primary">analytics</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface font-semibold">Benchmark Radar</h2>
+</div>
+<span class="font-label-code text-label-code text-outline">WEEK 04</span>
+</div>
+<!-- Radar Table -->
+<div class="flex flex-col gap-space-xs">
+<!-- Row 1 -->
+<div class="bg-surface-container-lowest p-space-sm rounded flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="font-label-code text-label-code text-primary font-bold">#1</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-dense text-on-surface font-medium">DeepSeek-R1</span>
+<span class="font-label-micro text-label-micro text-outline">Open Weights</span>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<div class="flex flex-col items-end">
+<span class="font-label-code text-label-code text-on-surface font-semibold">1,364 Elo</span>
+<span class="font-label-micro text-label-micro text-tertiary font-bold">+18 pts</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[18px]">trending_up</span>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="bg-surface-container-lowest p-space-sm rounded flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="font-label-code text-label-code text-secondary font-bold">#2</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-dense text-on-surface font-medium">Claude 3.5 Sonnet</span>
+<span class="font-label-micro text-label-micro text-outline">Anthropic API</span>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<div class="flex flex-col items-end">
+<span class="font-label-code text-label-code text-on-surface font-semibold">1,358 Elo</span>
+<span class="font-label-micro text-label-micro text-outline">-- stable</span>
+</div>
+<span class="material-symbols-outlined text-outline text-[18px]">horizontal_rule</span>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="bg-surface-container-lowest p-space-sm rounded flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="font-label-code text-label-code text-outline font-bold">#3</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-dense text-on-surface font-medium">o1-preview (High)</span>
+<span class="font-label-micro text-label-micro text-outline">OpenAI Reasoning</span>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<div class="flex flex-col items-end">
+<span class="font-label-code text-label-code text-on-surface font-semibold">1,349 Elo</span>
+<span class="font-label-micro text-label-micro text-error font-bold">-4 pts</span>
+</div>
+<span class="material-symbols-outlined text-error text-[18px]">trending_down</span>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="bg-surface-container-lowest p-space-sm rounded flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="font-label-code text-label-code text-outline font-bold">#4</span>
+<div class="flex flex-col">
+<span class="font-headline-sm text-body-dense text-on-surface font-medium">Llama-3.3-70B-Inst</span>
+<span class="font-label-micro text-label-micro text-outline">Meta AI</span>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<div class="flex flex-col items-end">
+<span class="font-label-code text-label-code text-on-surface font-semibold">1,288 Elo</span>
+<span class="font-label-micro text-label-micro text-tertiary font-bold">+8 pts</span>
+</div>
+<span class="material-symbols-outlined text-tertiary text-[18px]">trending_up</span>
+</div>
+</div>
+</div>
+<!-- Radar Sparkline Visual Element (Inline SVG) -->
+<div class="bg-surface-container-lowest p-space-sm rounded flex flex-col gap-space-xxs">
+<div class="flex justify-between items-center text-label-micro font-label-micro text-outline">
+<span>Overall Frontier Velocity Trend</span>
+<span class="text-primary font-bold">+14.2% MoM</span>
+</div>
+<div class="w-full h-12 flex items-center">
+<svg class="w-full h-10 overflow-visible" preserveaspectratio="none" viewbox="0 0 300 40">
+<path class="text-primary" d="M0,32 Q30,30 60,25 T120,20 T180,14 T240,16 T300,4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path>
+<path class="text-primary/10" d="M0,32 Q30,30 60,25 T120,20 T180,14 T240,16 T300,4 L300,40 L0,40 Z" fill="currentColor"></path>
+<circle class="text-secondary" cx="300" cy="4" fill="currentColor" r="3.5"></circle>
+</svg>
+</div>
+</div>
+</div>
+<!-- Technical Newsletter Dispatch Card -->
+<div class="bg-gradient-to-br from-surface-container-low to-surface-container-high rounded-xl p-space-md shadow-lg flex flex-col gap-space-md relative overflow-hidden">
+<div class="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-primary/10 blur-2xl pointer-events-none"></div>
+<div class="flex flex-col gap-space-xs">
+<span class="font-label-micro text-label-micro text-primary font-bold uppercase tracking-wider">Weekly Ingestion</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface font-semibold">ModelEval Weekly Dispatch</h3>
+<p class="font-body-dense text-body-dense text-on-surface-variant">
+              The technical briefing ML engineers actually open. Raw benchmark audits, clean architecture diffs, and zero AI hype.
+            </p>
+</div>
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center bg-surface-container-lowest rounded-lg p-space-xxs pl-space-sm gap-space-xs shadow-inner">
+<span class="material-symbols-outlined text-[18px] text-outline">mail</span>
+<input class="w-full bg-transparent text-on-surface placeholder:text-outline text-body-dense font-body-dense focus:outline-none" placeholder="architect@company.ai" type="email"/>
+<button class="h-8 px-space-md bg-primary hover:bg-primary-fixed text-on-primary font-headline-sm text-label-code rounded transition-colors shrink-0">
+                Subscribe
+              </button>
+</div>
+<span class="font-label-micro text-label-micro text-outline">Delivered Fridays at 08:00 UTC • Unsubscribe anytime</span>
+</div>
+</div>
+<!-- Curated Data & Reproduction Packs -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl flex flex-col gap-space-sm shadow-sm">
+<span class="font-label-micro text-label-micro text-outline uppercase tracking-wider">Quick Datasets &amp; Eval Scripts</span>
+<div class="flex flex-col gap-space-xs">
+<a class="flex items-center justify-between p-space-xs rounded hover:bg-surface-container text-body-dense font-body-dense text-on-surface transition-colors" href="#">
+<span class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-secondary">dataset</span>
+<span>SWE-bench-Verified-2025.parquet</span>
+</span>
+<span class="font-label-code text-label-code text-outline">18MB</span>
+</a>
+<a class="flex items-center justify-between p-space-xs rounded hover:bg-surface-container text-body-dense font-body-dense text-on-surface transition-colors" href="#">
+<span class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[16px] text-primary">terminal</span>
+<span>eval_test_time_compute.py</span>
+</span>
+<span class="font-label-code text-label-code text-outline">4.2KB</span>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></main></div></body></html>
