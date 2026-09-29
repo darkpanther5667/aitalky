@@ -50,11 +50,11 @@ async function handleSync(request: NextRequest) {
     const articles = await fetchLiveNews();
     console.log(`[Cron 30m AI Editor] Fetched ${articles.length} AI items from feeds`);
 
-    // 2. Run AI Senior Editor on top newest stories to synthesize executive takeaways and high-integrity prose
-    const aiProcessedTitles: string[] = [];
-    for (const art of articles.slice(0, 3)) {
-      try {
-        const published = await curateAndPublishStory({
+    // 2. Run AI Senior Editor in parallel on top newest stories to synthesize executive takeaways and high-integrity prose
+    const topStories = articles.slice(0, 2);
+    const aiResults = await Promise.allSettled(
+      topStories.map((art) =>
+        curateAndPublishStory({
           title: art.title,
           summary: art.summary,
           content: art.content,
@@ -63,14 +63,16 @@ async function handleSync(request: NextRequest) {
           url: art.url,
           publishedAt: art.publishedAt,
           imageUrl: art.imageUrl,
-        });
-        if (published) {
-          aiProcessedTitles.push(published.title);
-        }
-      } catch (err) {
-        console.warn(`[Cron AI Curator] Failed to rewrite story: ${art.title}`, err);
+        })
+      )
+    );
+
+    const aiProcessedTitles: string[] = [];
+    aiResults.forEach((res) => {
+      if (res.status === "fulfilled" && res.value) {
+        aiProcessedTitles.push(res.value.title);
       }
-    }
+    });
 
     // 3. Batch persist all articles to Supabase
     if (articles.length > 0) {
