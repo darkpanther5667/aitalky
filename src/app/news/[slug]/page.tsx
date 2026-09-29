@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getArticleBySlug, fetchLiveNews } from "@/lib/rss-sources";
 import { scrapeFullArticle } from "@/lib/article-scraper";
-import { getDbArticleBySlug, incrementArticleViews, upsertArticle } from "@/lib/db";
+import { getDbArticleBySlug, getDbArticles, incrementArticleViews, upsertArticle } from "@/lib/db";
 import { Article } from "@/types/news";
 import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
 import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
@@ -15,9 +15,15 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  let article = await getDbArticleBySlug(slug);
+  let article: Article | null = null;
+  try {
+    article = await getDbArticleBySlug(slug);
+  } catch {}
+
   if (!article) {
-    article = await getArticleBySlug(slug);
+    try {
+      article = await getArticleBySlug(slug);
+    } catch {}
   }
 
   if (!article) {
@@ -27,7 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const siteUrl = "https://aitalky.news";
+  const siteUrl = "https://aitalky.vercel.app";
   const canonicalUrl = `${siteUrl}/news/${article.slug}`;
   const ogImage = article.imageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
 
@@ -70,50 +76,71 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function NewsArticlePage({ params }: PageProps) {
   const { slug } = await params;
 
-  // 1. Try DB first for instant load
-  let article = await getDbArticleBySlug(slug);
+  // 1. Try DB first for instant sub-50ms load
+  let article: Article | null = null;
+  try {
+    article = await getDbArticleBySlug(slug);
+  } catch (err) {
+    console.error("DB article fetch error:", err);
+  }
+
   if (!article) {
-    article = await getArticleBySlug(slug);
+    try {
+      article = await getArticleBySlug(slug);
+    } catch (err) {
+      console.error("Live feed fetch error:", err);
+    }
   }
 
   if (!article) {
     notFound();
   }
 
-  // Record view count asynchronously in Supabase
+  // Record view count asynchronously
   incrementArticleViews(slug).catch(() => {});
 
-  // Deep scraper: Extract full multi-paragraph article body & real images
   let fullBody = article.content || article.summary;
   let heroImage = article.imageUrl;
   let keyPoints = article.keyPoints || [];
 
-  // If content is short (typical of raw RSS feeds), scrape full web page
+  // If content is brief, enrich with scraper safely
   if (!article.content || article.content.split("\n\n").length < 3) {
-    const scraped = await scrapeFullArticle(article.url, article.title, article.summary, article.category);
-    if (scraped.content) {
-      fullBody = scraped.content;
-    }
-    if (scraped.imageUrl) {
-      heroImage = scraped.imageUrl;
-    }
-    if (scraped.keyPoints && scraped.keyPoints.length > 0) {
-      keyPoints = scraped.keyPoints;
-    }
+    try {
+      const scraped = await scrapeFullArticle(article.url, article.title, article.summary, article.category);
+      if (scraped.content) {
+        fullBody = scraped.content;
+      }
+      if (scraped.imageUrl) {
+        heroImage = scraped.imageUrl;
+      }
+      if (scraped.keyPoints && scraped.keyPoints.length > 0) {
+        keyPoints = scraped.keyPoints;
+      }
 
-    // Persist enriched article into Supabase
-    upsertArticle({
-      ...article,
-      content: fullBody,
-      imageUrl: heroImage,
-      keyPoints,
-    }).catch(() => {});
+      upsertArticle({
+        ...article,
+        content: fullBody,
+        imageUrl: heroImage,
+        keyPoints,
+      }).catch(() => {});
+    } catch (scrapeErr) {
+      console.error("Article scrape error:", scrapeErr);
+    }
   }
 
-  const allArticles = await fetchLiveNews();
-  const relatedArticles = allArticles
-    .filter((a) => a.slug !== article.slug)
-    .slice(0, 3);
+  // Fetch related articles from database first for instant performance
+  let relatedArticles: Article[] = [];
+  try {
+    const dbArticles = await getDbArticles(article.category, 5);
+    relatedArticles = dbArticles.filter((a: Article) => a.slug !== article.slug).slice(0, 3);
+  } catch {}
+
+  if (relatedArticles.length === 0) {
+    try {
+      const allArticles = await fetchLiveNews();
+      relatedArticles = allArticles.filter((a: Article) => a.slug !== article.slug).slice(0, 3);
+    } catch {}
+  }
 
   const formattedDate = new Date(article.publishedAt).toLocaleDateString("en-US", {
     weekday: "long",

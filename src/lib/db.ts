@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import { Article, Category } from "@/types/news";
+import { supabase, getSupabaseAdmin } from "@/lib/supabase";
 
 let pool: Pool | null = null;
 
@@ -14,197 +15,289 @@ export function getDbPool(): Pool {
       ssl: {
         rejectUnauthorized: false,
       },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      max: 5,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 3000,
     });
   }
   return pool;
 }
 
-export async function initDb() {
-  const p = getDbPool();
-  const query = `
-    CREATE TABLE IF NOT EXISTS articles (
-      id TEXT PRIMARY KEY,
-      slug TEXT UNIQUE NOT NULL,
-      title TEXT NOT NULL,
-      summary TEXT NOT NULL,
-      content TEXT NOT NULL,
-      source TEXT NOT NULL,
-      source_url TEXT,
-      url TEXT NOT NULL,
-      published_at TIMESTAMPTZ NOT NULL,
-      category TEXT NOT NULL,
-      reading_time_minutes INT DEFAULT 3,
-      author TEXT,
-      author_role TEXT,
-      image_url TEXT,
-      tags TEXT[] DEFAULT '{}',
-      key_points TEXT[] DEFAULT '{}',
-      views INT DEFAULT 0,
-      likes INT DEFAULT 0,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
+function mapRowToArticle(data: any): Article {
+  return {
+    id: data.id,
+    slug: data.slug,
+    title: data.title,
+    summary: data.summary,
+    content: data.content,
+    source: data.source,
+    sourceUrl: data.source_url || data.sourceUrl || "",
+    url: data.url,
+    publishedAt: new Date(data.published_at || data.publishedAt).toISOString(),
+    category: data.category as Category,
+    readingTimeMinutes: data.reading_time_minutes || data.readingTimeMinutes || 3,
+    author: data.author,
+    authorRole: data.author_role || data.authorRole,
+    imageUrl: data.image_url || data.imageUrl,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    keyPoints: Array.isArray(data.key_points || data.keyPoints)
+      ? data.key_points || data.keyPoints
+      : [],
+    views: data.views || 0,
+    likes: data.likes || 0,
+  };
+}
+
+export async function getDbArticleBySlug(slug: string): Promise<Article | null> {
+  // 1. Try Supabase REST API first (fast, HTTPS port 443, reliable on Vercel)
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data, error } = await client
+      .from("articles")
+      .select("*")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (data && !error) {
+      return mapRowToArticle(data);
+    }
+  } catch (err) {
+    console.error("Supabase REST getDbArticleBySlug error:", err);
+  }
+
+  // 2. Fallback to direct pg pool
+  try {
+    const p = getDbPool();
+    const res = await p.query(
+      `SELECT
+        id, slug, title, summary, content, source,
+        source_url as "sourceUrl", url, published_at as "publishedAt",
+        category, reading_time_minutes as "readingTimeMinutes",
+        author, author_role as "authorRole", image_url as "imageUrl",
+        tags, key_points as "keyPoints", views, likes
+      FROM articles
+      WHERE slug = $1 LIMIT 1`,
+      [slug]
     );
 
-    CREATE INDEX IF NOT EXISTS idx_articles_slug ON articles(slug);
-    CREATE INDEX IF NOT EXISTS idx_articles_published_at ON articles(published_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_articles_category ON articles(category);
+    if (res.rows.length === 0) return null;
+    return mapRowToArticle(res.rows[0]);
+  } catch (pgErr) {
+    console.error("PG fallback getDbArticleBySlug error:", pgErr);
+    return null;
+  }
+}
 
-    CREATE TABLE IF NOT EXISTS subscribers (
-      id SERIAL PRIMARY KEY,
-      email TEXT UNIQUE NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
+export async function getDbArticles(category?: Category, limit: number = 30): Promise<Article[]> {
+  // 1. Try Supabase REST API first
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    let query = client
+      .from("articles")
+      .select("*")
+      .order("published_at", { ascending: false })
+      .limit(limit);
 
-    CREATE TABLE IF NOT EXISTS article_reactions (
-      id SERIAL PRIMARY KEY,
-      article_slug TEXT NOT NULL,
-      reaction_type TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
+    if (category && category !== "all") {
+      query = query.eq("category", category);
+    }
 
-    CREATE TABLE IF NOT EXISTS bookmarks (
-      id SERIAL PRIMARY KEY,
-      user_id UUID NOT NULL,
-      article_slug TEXT NOT NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      UNIQUE(user_id, article_slug)
-    );
-    CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id);
-  `;
+    const { data, error } = await query;
+    if (data && !error && data.length > 0) {
+      return data.map(mapRowToArticle);
+    }
+  } catch (err) {
+    console.error("Supabase REST getDbArticles error:", err);
+  }
 
-  await p.query(query);
+  // 2. Fallback to direct pg pool
+  try {
+    const p = getDbPool();
+    let query = `
+      SELECT
+        id, slug, title, summary, content, source,
+        source_url as "sourceUrl", url, published_at as "publishedAt",
+        category, reading_time_minutes as "readingTimeMinutes",
+        author, author_role as "authorRole", image_url as "imageUrl",
+        tags, key_points as "keyPoints", views, likes
+      FROM articles
+    `;
+    const params: any[] = [];
+
+    if (category && category !== "all") {
+      query += ` WHERE category = $1 ORDER BY published_at DESC LIMIT $2`;
+      params.push(category, limit);
+    } else {
+      query += ` ORDER BY published_at DESC LIMIT $1`;
+      params.push(limit);
+    }
+
+    const res = await p.query(query, params);
+    return res.rows.map(mapRowToArticle);
+  } catch (pgErr) {
+    console.error("PG fallback getDbArticles error:", pgErr);
+    return [];
+  }
 }
 
 export async function upsertArticle(article: Article): Promise<void> {
-  const p = getDbPool();
-  const query = `
-    INSERT INTO articles (
-      id, slug, title, summary, content, source, source_url, url,
-      published_at, category, reading_time_minutes, author, author_role,
-      image_url, tags, key_points, updated_at
-    ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
-    )
-    ON CONFLICT (slug) DO UPDATE SET
-      title = EXCLUDED.title,
-      summary = EXCLUDED.summary,
-      content = CASE WHEN length(EXCLUDED.content) > length(articles.content) THEN EXCLUDED.content ELSE articles.content END,
-      source = EXCLUDED.source,
-      source_url = EXCLUDED.source_url,
-      image_url = COALESCE(EXCLUDED.image_url, articles.image_url),
-      key_points = CASE WHEN cardinality(EXCLUDED.key_points) > 0 THEN EXCLUDED.key_points ELSE articles.key_points END,
-      updated_at = NOW();
-  `;
+  // 1. Try Supabase REST API first
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const payload = {
+      id: article.id,
+      slug: article.slug,
+      title: article.title,
+      summary: article.summary,
+      content: article.content || article.summary,
+      source: article.source,
+      source_url: article.sourceUrl || null,
+      url: article.url,
+      published_at: article.publishedAt,
+      category: article.category,
+      reading_time_minutes: article.readingTimeMinutes || 3,
+      author: article.author,
+      author_role: article.authorRole,
+      image_url: article.imageUrl,
+      tags: article.tags || [],
+      key_points: article.keyPoints || [],
+      updated_at: new Date().toISOString(),
+    };
 
-  await p.query(query, [
-    article.id,
-    article.slug,
-    article.title,
-    article.summary,
-    article.content,
-    article.source,
-    article.sourceUrl || null,
-    article.url,
-    article.publishedAt,
-    article.category,
-    article.readingTimeMinutes || 3,
-    article.author,
-    article.authorRole,
-    article.imageUrl,
-    article.tags || [],
-    article.keyPoints || [],
-  ]);
+    const { error } = await client
+      .from("articles")
+      .upsert(payload, { onConflict: "slug" });
+
+    if (!error) return;
+  } catch (err) {
+    console.error("Supabase REST upsert error:", err);
+  }
+
+  // 2. Fallback to direct pg pool
+  try {
+    const p = getDbPool();
+    const query = `
+      INSERT INTO articles (
+        id, slug, title, summary, content, source, source_url, url,
+        published_at, category, reading_time_minutes, author, author_role,
+        image_url, tags, key_points, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+      )
+      ON CONFLICT (slug) DO UPDATE SET
+        title = EXCLUDED.title,
+        summary = EXCLUDED.summary,
+        content = CASE WHEN length(EXCLUDED.content) > length(articles.content) THEN EXCLUDED.content ELSE articles.content END,
+        source = EXCLUDED.source,
+        source_url = EXCLUDED.source_url,
+        image_url = COALESCE(EXCLUDED.image_url, articles.image_url),
+        key_points = CASE WHEN cardinality(EXCLUDED.key_points) > 0 THEN EXCLUDED.key_points ELSE articles.key_points END,
+        updated_at = NOW();
+    `;
+
+    await p.query(query, [
+      article.id,
+      article.slug,
+      article.title,
+      article.summary,
+      article.content || article.summary,
+      article.source,
+      article.sourceUrl || null,
+      article.url,
+      article.publishedAt,
+      article.category,
+      article.readingTimeMinutes || 3,
+      article.author,
+      article.authorRole,
+      article.imageUrl,
+      article.tags || [],
+      article.keyPoints || [],
+    ]);
+  } catch (pgErr) {
+    console.error(`PG upsert error for ${article.slug}:`, pgErr);
+  }
 }
 
 export async function upsertArticles(articles: Article[]): Promise<void> {
   for (const article of articles) {
     try {
       await upsertArticle(article);
-    } catch (err) {
-      console.error(`Failed to upsert article ${article.slug}:`, err);
+    } catch {
+      // Ignore individual failures
     }
   }
 }
 
-export async function getDbArticles(category?: Category, limit: number = 30): Promise<Article[]> {
-  const p = getDbPool();
-  let query = `
-    SELECT
-      id, slug, title, summary, content, source,
-      source_url as "sourceUrl", url, published_at as "publishedAt",
-      category, reading_time_minutes as "readingTimeMinutes",
-      author, author_role as "authorRole", image_url as "imageUrl",
-      tags, key_points as "keyPoints", views, likes
-    FROM articles
-  `;
-  const params: any[] = [];
-
-  if (category && category !== "all") {
-    query += ` WHERE category = $1`;
-    params.push(category);
-    query += ` ORDER BY published_at DESC LIMIT $2`;
-    params.push(limit);
-  } else {
-    query += ` ORDER BY published_at DESC LIMIT $1`;
-    params.push(limit);
-  }
-
-  const res = await p.query(query, params);
-  return res.rows.map((row) => ({
-    ...row,
-    publishedAt: new Date(row.publishedAt).toISOString(),
-  }));
-}
-
-export async function getDbArticleBySlug(slug: string): Promise<Article | null> {
-  const p = getDbPool();
-  const res = await p.query(
-    `SELECT
-      id, slug, title, summary, content, source,
-      source_url as "sourceUrl", url, published_at as "publishedAt",
-      category, reading_time_minutes as "readingTimeMinutes",
-      author, author_role as "authorRole", image_url as "imageUrl",
-      tags, key_points as "keyPoints", views, likes
-    FROM articles
-    WHERE slug = $1 LIMIT 1`,
-    [slug]
-  );
-
-  if (res.rows.length === 0) return null;
-  const row = res.rows[0];
-  return {
-    ...row,
-    publishedAt: new Date(row.publishedAt).toISOString(),
-  };
-}
-
 export async function incrementArticleViews(slug: string): Promise<void> {
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data } = await client
+      .from("articles")
+      .select("views")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (data) {
+      await client
+        .from("articles")
+        .update({ views: (data.views || 0) + 1 })
+        .eq("slug", slug);
+      return;
+    }
+  } catch {}
+
   try {
     const p = getDbPool();
     await p.query(`UPDATE articles SET views = views + 1 WHERE slug = $1`, [slug]);
-  } catch {
-    // Ignore view increment errors
-  }
+  } catch {}
 }
 
 export async function incrementArticleLikes(slug: string): Promise<number> {
-  const p = getDbPool();
-  const res = await p.query(
-    `UPDATE articles SET likes = likes + 1 WHERE slug = $1 RETURNING likes`,
-    [slug]
-  );
-  return res.rows[0]?.likes || 0;
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data } = await client
+      .from("articles")
+      .select("likes")
+      .eq("slug", slug)
+      .maybeSingle();
+
+    if (data) {
+      const nextLikes = (data.likes || 0) + 1;
+      await client.from("articles").update({ likes: nextLikes }).eq("slug", slug);
+      return nextLikes;
+    }
+  } catch {}
+
+  try {
+    const p = getDbPool();
+    const res = await p.query(
+      `UPDATE articles SET likes = likes + 1 WHERE slug = $1 RETURNING likes`,
+      [slug]
+    );
+    return res.rows[0]?.likes || 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function addSubscriber(email: string): Promise<{ success: boolean; message: string }> {
+  const cleanEmail = email.toLowerCase().trim();
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { error } = await client
+      .from("subscribers")
+      .upsert({ email: cleanEmail }, { onConflict: "email" });
+
+    if (!error) {
+      return { success: true, message: "Subscribed to Morning AI Wire successfully." };
+    }
+  } catch {}
+
   try {
     const p = getDbPool();
     await p.query(
       `INSERT INTO subscribers (email) VALUES ($1) ON CONFLICT (email) DO NOTHING`,
-      [email.toLowerCase().trim()]
+      [cleanEmail]
     );
     return { success: true, message: "Subscribed to Morning AI Wire successfully." };
   } catch (err: any) {
@@ -213,55 +306,108 @@ export async function addSubscriber(email: string): Promise<{ success: boolean; 
 }
 
 export async function searchArticlesDb(query: string, limit: number = 20): Promise<Article[]> {
-  const p = getDbPool();
   const sanitized = query.trim();
   if (!sanitized) return [];
 
-  const res = await p.query(
-    `SELECT
-      id, slug, title, summary, content, source,
-      source_url as "sourceUrl", url, published_at as "publishedAt",
-      category, reading_time_minutes as "readingTimeMinutes",
-      author, author_role as "authorRole", image_url as "imageUrl",
-      tags, key_points as "keyPoints", views, likes
-    FROM articles
-    WHERE title ILIKE $1 OR summary ILIKE $1 OR content ILIKE $1
-    ORDER BY published_at DESC
-    LIMIT $2`,
-    [`%${sanitized}%`, limit]
-  );
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data, error } = await client
+      .from("articles")
+      .select("*")
+      .or(`title.ilike.%${sanitized}%,summary.ilike.%${sanitized}%`)
+      .order("published_at", { ascending: false })
+      .limit(limit);
 
-  return res.rows.map((row) => ({
-    ...row,
-    publishedAt: new Date(row.publishedAt).toISOString(),
-  }));
-}
+    if (data && !error && data.length > 0) {
+      return data.map(mapRowToArticle);
+    }
+  } catch {}
 
-export async function getUserBookmarks(userId: string): Promise<string[]> {
-  const p = getDbPool();
-  const res = await p.query(
-    `SELECT article_slug FROM bookmarks WHERE user_id = $1 ORDER BY created_at DESC`,
-    [userId]
-  );
-  return res.rows.map((r) => r.article_slug);
-}
-
-export async function toggleUserBookmark(userId: string, slug: string): Promise<{ bookmarked: boolean }> {
-  const p = getDbPool();
-  const check = await p.query(
-    `SELECT id FROM bookmarks WHERE user_id = $1 AND article_slug = $2`,
-    [userId, slug]
-  );
-
-  if (check.rows.length > 0) {
-    await p.query(`DELETE FROM bookmarks WHERE user_id = $1 AND article_slug = $2`, [userId, slug]);
-    return { bookmarked: false };
-  } else {
-    await p.query(
-      `INSERT INTO bookmarks (user_id, article_slug) VALUES ($1, $2) ON CONFLICT (user_id, article_slug) DO NOTHING`,
-      [userId, slug]
+  try {
+    const p = getDbPool();
+    const res = await p.query(
+      `SELECT
+        id, slug, title, summary, content, source,
+        source_url as "sourceUrl", url, published_at as "publishedAt",
+        category, reading_time_minutes as "readingTimeMinutes",
+        author, author_role as "authorRole", image_url as "imageUrl",
+        tags, key_points as "keyPoints", views, likes
+      FROM articles
+      WHERE title ILIKE $1 OR summary ILIKE $1 OR content ILIKE $1
+      ORDER BY published_at DESC
+      LIMIT $2`,
+      [`%${sanitized}%`, limit]
     );
-    return { bookmarked: true };
+
+    return res.rows.map(mapRowToArticle);
+  } catch {
+    return [];
   }
 }
 
+export async function getUserBookmarks(userId: string): Promise<string[]> {
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data, error } = await client
+      .from("bookmarks")
+      .select("article_slug")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (data && !error) {
+      return data.map((r: any) => r.article_slug);
+    }
+  } catch {}
+
+  try {
+    const p = getDbPool();
+    const res = await p.query(
+      `SELECT article_slug FROM bookmarks WHERE user_id = $1 ORDER BY created_at DESC`,
+      [userId]
+    );
+    return res.rows.map((r) => r.article_slug);
+  } catch {
+    return [];
+  }
+}
+
+export async function toggleUserBookmark(userId: string, slug: string): Promise<{ bookmarked: boolean }> {
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data } = await client
+      .from("bookmarks")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("article_slug", slug)
+      .maybeSingle();
+
+    if (data) {
+      await client.from("bookmarks").delete().eq("id", data.id);
+      return { bookmarked: false };
+    } else {
+      await client.from("bookmarks").insert({ user_id: userId, article_slug: slug });
+      return { bookmarked: true };
+    }
+  } catch {}
+
+  try {
+    const p = getDbPool();
+    const check = await p.query(
+      `SELECT id FROM bookmarks WHERE user_id = $1 AND article_slug = $2`,
+      [userId, slug]
+    );
+
+    if (check.rows.length > 0) {
+      await p.query(`DELETE FROM bookmarks WHERE user_id = $1 AND article_slug = $2`, [userId, slug]);
+      return { bookmarked: false };
+    } else {
+      await p.query(
+        `INSERT INTO bookmarks (user_id, article_slug) VALUES ($1, $2) ON CONFLICT (user_id, article_slug) DO NOTHING`,
+        [userId, slug]
+      );
+      return { bookmarked: true };
+    }
+  } catch {
+    return { bookmarked: false };
+  }
+}
