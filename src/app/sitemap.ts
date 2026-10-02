@@ -1,6 +1,8 @@
 import { MetadataRoute } from "next";
 import { getDbArticles } from "@/lib/db";
 import { fetchLiveNews } from "@/lib/rss-sources";
+import { AI_MODELS } from "@/lib/models-data";
+import { POPULAR_COMPARISONS } from "@/lib/benchmarks-data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://aitalky.vercel.app";
@@ -52,6 +54,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/models/compare`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/about`,
       lastModified: new Date(),
       changeFrequency: "monthly",
@@ -83,5 +91,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  return [...staticEntries, ...categoryEntries, ...articleEntries];
+  const modelEntries: MetadataRoute.Sitemap = AI_MODELS.map((m) => ({
+    url: `${baseUrl}/models/${m.id}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.85,
+  }));
+
+  const comparisonEntries: MetadataRoute.Sitemap = POPULAR_COMPARISONS.map((c) => ({
+    url: `${baseUrl}/models/compare/${c.slug}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.85,
+  }));
+
+  return [...staticEntries, ...categoryEntries, ...modelEntries, ...comparisonEntries, ...articleEntries];
 }

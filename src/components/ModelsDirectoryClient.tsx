@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
 import { AIModel, ModelModality, ModelAccessType } from "@/types/model";
 import { MODALITY_CONFIG, LAB_OPTIONS } from "@/lib/models-data";
 import {
@@ -16,6 +17,8 @@ import {
   Info,
   CheckCircle2,
   SlidersHorizontal,
+  ArrowRight,
+  ArrowRightLeft,
 } from "lucide-react";
 
 interface ModelsDirectoryClientProps {
@@ -325,15 +328,21 @@ export function ModelsDirectoryClient({ initialModels }: ModelsDirectoryClientPr
                 {/* Card Actions & Links */}
                 <div className="pt-4 border-t border-[#f0f0ee] dark:border-[#1e1e1c] flex flex-wrap items-center justify-between gap-3 text-xs">
                   <div className="flex flex-wrap items-center gap-2">
-                    <a
-                      href={model.officialUrl}
-                      target="_blank"
-                      rel="noopener nofollow"
+                    <Link
+                      href={`/models/${model.id}`}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#141413] text-white dark:bg-[#f3f3f0] dark:text-[#141413] hover:opacity-90 transition font-medium text-[11px]"
                     >
-                      <span>Overview</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
+                      <span>Profile</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+
+                    <Link
+                      href={`/models/compare?a=${model.id}`}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-[#e8e8e6] dark:border-[#2a2a28] hover:border-black dark:hover:border-white text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition font-medium text-[11px]"
+                    >
+                      <span>Compare</span>
+                      <ArrowRightLeft className="w-3 h-3" />
+                    </Link>
 
                     {model.huggingFaceUrl && (
                       <a
@@ -342,20 +351,8 @@ export function ModelsDirectoryClient({ initialModels }: ModelsDirectoryClientPr
                         rel="noopener nofollow"
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-[#e8e8e6] dark:border-[#2a2a28] hover:border-black dark:hover:border-white text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition font-medium text-[11px]"
                       >
-                        <span>Hugging Face</span>
+                        <span>Weights</span>
                         <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-
-                    {model.apiDocUrl && (
-                      <a
-                        href={model.apiDocUrl}
-                        target="_blank"
-                        rel="noopener nofollow"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded border border-[#e8e8e6] dark:border-[#2a2a28] hover:border-black dark:hover:border-white text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition font-medium text-[11px]"
-                      >
-                        <span>API Docs</span>
-                        <Code className="w-3 h-3" />
                       </a>
                     )}
                   </div>
@@ -364,7 +361,7 @@ export function ModelsDirectoryClient({ initialModels }: ModelsDirectoryClientPr
                     onClick={() => setSelectedModelForModal(model)}
                     className="text-xs text-[#6b7280] dark:text-[#9ca3af] hover:text-black dark:hover:text-white font-medium underline underline-offset-2 cursor-pointer"
                   >
-                    Technical Specs →
+                    Quick Specs →
                   </button>
                 </div>
               </article>
