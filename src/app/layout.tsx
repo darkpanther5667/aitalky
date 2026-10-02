@@ -46,6 +46,9 @@ export const metadata: Metadata = {
       "text/plain": "https://aitalky.vercel.app/llms.txt",
     },
   },
+  other: {
+    "google-adsense-account": "ca-pub-5606771623878852",
+  },
   icons: {
     icon: [{ url: "/logo-icon.svg", type: "image/svg+xml" }],
     shortcut: "/logo-icon.svg",
@@ -131,6 +134,11 @@ export default function RootLayout({
     >
       <head>
         <link rel="alternate" type="text/plain" href="https://aitalky.vercel.app/llms.txt" title="LLMs.txt" />
+        <script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5606771623878852"
+          crossOrigin="anonymous"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
