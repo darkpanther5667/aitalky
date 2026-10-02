@@ -57,51 +57,38 @@ RESPONSE FORMAT (Respond with ONLY valid JSON, no markdown formatting):
   "whyItMatters": "1 sentence explaining practical significance."
 }`;
 
-  // 1. Try Anthropic API if key exists
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (anthropicKey) {
+  // Generate grounded summary using Google Gemini
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (!geminiKey) {
+    return null;
+  }
+
+  const candidateModels = [
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash-lite",
+  ];
+
+  for (const model of candidateModels) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      let res = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "x-api-key": anthropicKey,
-          "anthropic-version": "2023-06-01",
-          "content-type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-3-5-haiku-20241022",
-          max_tokens: 300,
-          temperature: 0.2,
-          messages: [{ role: "user", content: prompt }],
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 350,
+          },
         }),
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        const responseText = json?.content?.[0]?.text || "";
-        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
-        if (parsed.summary && parsed.whyItMatters) {
-          const result: GroundedSummaryResult = {
-            aiSummary: parsed.summary.trim(),
-            whyItMatters: parsed.whyItMatters.trim(),
-          };
-          summaryCache.set(cacheKey, result);
-          return result;
-        }
-      }
-    } catch (err) {
-      console.warn("[AI Curator] Anthropic request error, falling back to Gemini:", err);
-    }
-  }
-
-  // 2. Fallback to Gemini API
-  const geminiKey = process.env.GEMINI_API_KEY;
-  if (geminiKey) {
-    const candidateModels = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"];
-    for (const model of candidateModels) {
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
-      try {
-        const res = await fetch(endpoint, {
+      // Handle 429 rate limit or 503 high demand with a quick backoff
+      if (res.status === 429 || res.status === 503) {
+        await new Promise((r) => setTimeout(r, 1200));
+        res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -112,23 +99,23 @@ RESPONSE FORMAT (Respond with ONLY valid JSON, no markdown formatting):
             },
           }),
         });
-
-        if (res.ok) {
-          const json = await res.json();
-          const rawOutput = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          const parsed = JSON.parse(rawOutput.replace(/```json\n?|\n?```/g, "").trim());
-          if (parsed.summary && parsed.whyItMatters) {
-            const result: GroundedSummaryResult = {
-              aiSummary: parsed.summary.trim(),
-              whyItMatters: parsed.whyItMatters.trim(),
-            };
-            summaryCache.set(cacheKey, result);
-            return result;
-          }
-        }
-      } catch (err) {
-        // try next model
       }
+
+      if (res.ok) {
+        const json = await res.json();
+        const rawOutput = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const parsed = JSON.parse(rawOutput.replace(/```json\n?|\n?```/g, "").trim());
+        if (parsed.summary && parsed.whyItMatters) {
+          const result: GroundedSummaryResult = {
+            aiSummary: parsed.summary.trim(),
+            whyItMatters: parsed.whyItMatters.trim(),
+          };
+          summaryCache.set(cacheKey, result);
+          return result;
+        }
+      }
+    } catch {
+      // try next Gemini model
     }
   }
 

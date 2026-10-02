@@ -151,7 +151,7 @@ export default function AboutPage() {
             </h2>
             <div className="space-y-4 text-base">
               <p>
-                <strong>1. Machine-Assisted Summaries:</strong> Brief summaries and &ldquo;Why it matters&rdquo; bullet points are generated using modern language models (Claude and Gemini). While our prompts enforce strict factual grounding, machine summaries may occasionally contain interpretations or inaccuracies. Original reporting and complete context always belong to the attributed source publication.
+                <strong>1. Machine-Assisted Summaries:</strong> Brief summaries and &ldquo;Why it matters&rdquo; bullet points are generated using Google Gemini models. While our prompts enforce strict factual grounding in the source text, machine summaries may occasionally contain interpretations or inaccuracies. Original reporting and complete context always belong to the attributed source publication.
               </p>
               <p>
                 <strong>2. Copyright &amp; Fair Use:</strong> aitalky operates strictly as a news curator and aggregator. We do not reproduce full articles. Our index stores only the title, publication metadata, and excerpts necessary to guide readers to the original reporting.

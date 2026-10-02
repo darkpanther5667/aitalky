@@ -15,7 +15,7 @@ The comprehensive 9-phase overhaul of [aitalky](https://aitalky.vercel.app) is c
 - **Multi-Source Deduplication & Clustering**: Implemented token-similarity clustering in [`rss-sources.ts`](file:///c:/Users/allbe/Documents/antigravity/magical-fermi/src/lib/rss-sources.ts) to group stories covering the same event into primary cards with `alsoCoveredBy` links to other outlets.
 
 ### Phase 2: Grounded, Value-Add Summaries
-- **Anthropic & Gemini Fallback**: Refactored [`ai-curator.ts`](file:///c:/Users/allbe/Documents/antigravity/magical-fermi/src/lib/ai-curator.ts) to generate concise 2–3 sentence factual summaries and 1-line "Why it matters" takeaways using Claude (`ANTHROPIC_API_KEY`) with automatic fallback to Gemini (`gemini-flash-lite-latest`).
+- **Google Gemini Only**: Configured [`ai-curator.ts`](file:///c:/Users/allbe/Documents/antigravity/magical-fermi/src/lib/ai-curator.ts) to generate concise 2–3 sentence factual summaries and 1-line "Why it matters" takeaways using Google Gemini (`GEMINI_API_KEY`) across candidate models (`gemini-flash-lite-latest`, `gemini-2.5-flash`, `gemini-flash-latest`, `gemini-2.5-flash-lite`) with backoff rate-limit handling. No other external LLM APIs are used.
 - **Strict Grounding**: Prompts strictly constrain the model to facts explicitly stated in the source text. Articles under 30 words are never AI-summarized.
 - **Transparent Labeling**: Displayed with clear badge: `Summary (AI-assisted)` and italicized `Why it matters`.
 
