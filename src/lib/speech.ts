@@ -3,13 +3,30 @@ type SpeechCallback = (isPlaying: boolean, currentText?: string) => void;
 class SpeechManager {
   private synth: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private currentAudio: HTMLAudioElement | null = null;
+  private audioAbortController: AbortController | null = null;
   private listeners: Set<SpeechCallback> = new Set();
   private rate: number = 1.0;
   private currentText: string = "";
+  private cachedVoices: SpeechSynthesisVoice[] = [];
 
   constructor() {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      this.synth = window.speechSynthesis;
+    if (typeof window !== "undefined") {
+      if ("speechSynthesis" in window) {
+        this.synth = window.speechSynthesis;
+        this.loadVoices();
+        if (this.synth.onvoiceschanged !== undefined) {
+          this.synth.onvoiceschanged = () => this.loadVoices();
+        }
+      }
+    }
+  }
+
+  private loadVoices() {
+    if (!this.synth) return;
+    const voices = this.synth.getVoices();
+    if (voices && voices.length > 0) {
+      this.cachedVoices = voices;
     }
   }
 
@@ -26,8 +43,9 @@ class SpeechManager {
 
   public setRate(newRate: number) {
     this.rate = newRate;
-    if (this.currentUtterance && this.synth?.speaking) {
-      // Re-trigger with new rate if currently playing
+    if (this.currentAudio) {
+      this.currentAudio.playbackRate = newRate;
+    } else if (this.currentUtterance && this.synth?.speaking) {
       const text = this.currentText;
       this.stop();
       this.speak(text);
@@ -39,35 +57,85 @@ class SpeechManager {
   }
 
   public isSpeaking(): boolean {
+    if (this.currentAudio && !this.currentAudio.paused && !this.currentAudio.ended) {
+      return true;
+    }
     return !!(this.synth && (this.synth.speaking || this.synth.pending));
   }
 
-  public speak(text: string) {
-    if (!this.synth) return;
-
+  public async speak(text: string, voiceName: "Aoede" | "Puck" = "Aoede") {
     this.stop();
 
-    if (!text.trim()) return;
-
+    if (!text || !text.trim()) return;
     this.currentText = text;
+    this.notify(true, text);
+
+    // 1. Try server-side Studio Neural Voice first (Gemini Flash Neural Audio)
+    try {
+      this.audioAbortController = new AbortController();
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text.slice(0, 600),
+          voice: voiceName,
+        }),
+        signal: this.audioAbortController.signal,
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audio.playbackRate = this.rate;
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
+          this.notify(false);
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+          this.currentAudio = null;
+          this.fallbackSpeak(text);
+        };
+
+        this.currentAudio = audio;
+        await audio.play();
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+      console.warn("[Speech] Neural TTS fetch failed, using natural browser voice:", err);
+    }
+
+    // 2. High-fidelity browser speech synthesis fallback
+    this.fallbackSpeak(text);
+  }
+
+  private fallbackSpeak(text: string) {
+    if (!this.synth) {
+      this.notify(false);
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = this.rate;
-    utterance.pitch = 1.0;
+    utterance.rate = this.rate * 0.96; // Slightly calmer tempo for editorial broadcast
+    utterance.pitch = 0.98; // Richer, deeper journalistic resonance
 
-    // Pick crisp english voice if available
-    const voices = this.synth.getVoices();
-    const naturalVoice = voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        (v.name.includes("Natural") ||
-          v.name.includes("Google") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Daniel") ||
-          v.name.includes("Alex"))
-    ) || voices.find((v) => v.lang.startsWith("en"));
+    const voices = this.cachedVoices.length > 0 ? this.cachedVoices : this.synth.getVoices();
 
-    if (naturalVoice) {
-      utterance.voice = naturalVoice;
+    // Priority ranking: Microsoft Natural > Google Neural > Apple Enhanced > Standard English
+    const priorityVoice =
+      voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Natural") || v.name.includes("Online"))) ||
+      voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Google") || v.name.includes("Neural"))) ||
+      voices.find((v) => v.lang.startsWith("en") && (v.name.includes("Enhanced") || v.name.includes("Daniel") || v.name.includes("Samantha"))) ||
+      voices.find((v) => v.lang === "en-US" || v.lang === "en-GB") ||
+      voices.find((v) => v.lang.startsWith("en"));
+
+    if (priorityVoice) {
+      utterance.voice = priorityVoice;
     }
 
     utterance.onstart = () => {
@@ -89,26 +157,45 @@ class SpeechManager {
   }
 
   public pause() {
-    if (this.synth && this.synth.speaking) {
+    if (this.currentAudio && !this.currentAudio.paused) {
+      this.currentAudio.pause();
+      this.notify(false, this.currentText);
+    } else if (this.synth && this.synth.speaking) {
       this.synth.pause();
       this.notify(false, this.currentText);
     }
   }
 
   public resume() {
-    if (this.synth && this.synth.paused) {
+    if (this.currentAudio && this.currentAudio.paused) {
+      this.currentAudio.play();
+      this.notify(true, this.currentText);
+    } else if (this.synth && this.synth.paused) {
       this.synth.resume();
       this.notify(true, this.currentText);
     }
   }
 
   public stop() {
+    if (this.audioAbortController) {
+      this.audioAbortController.abort();
+      this.audioAbortController = null;
+    }
+
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
+    }
+
     if (this.synth) {
       this.synth.cancel();
-      this.notify(false);
       this.currentUtterance = null;
     }
+
+    this.notify(false);
   }
 }
 
 export const speechManager = typeof window !== "undefined" ? new SpeechManager() : null;
+
