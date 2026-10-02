@@ -221,12 +221,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
 
       <article className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors">
         {/* Navigation Breadcrumb Bar */}
-        <header className="border-b border-[#e8e8e6] dark:border-[#222220] py-3.5 px-4 sm:px-6">
+        <header className="border-b border-[#e8e8e6] dark:border-[#222220] py-2.5 sm:py-3.5 px-3 sm:px-6">
           <div className="max-w-4xl mx-auto flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af]">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-4">
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 hover:text-black dark:hover:text-white transition-colors font-medium"
+                className="inline-flex items-center gap-1.5 hover:text-black dark:hover:text-white transition-colors font-medium p-1 sm:p-0"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Back</span>
@@ -235,7 +235,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
               <Logo size="sm" showSubtitle={false} />
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <span className="uppercase tracking-wider font-semibold text-[#141413] dark:text-[#f3f3f0]">
                 {article.category}
               </span>
@@ -246,19 +246,19 @@ export default async function NewsArticlePage({ params }: PageProps) {
         </header>
 
         {/* Main Article Container */}
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+        <main className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-16">
           {/* Category Tag */}
-          <div className="text-xs uppercase tracking-widest font-semibold text-[#6b7280] dark:text-[#9ca3af] mb-3">
+          <div className="text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-[#6b7280] dark:text-[#9ca3af] mb-2 sm:mb-3">
             {article.category}
           </div>
 
           {/* Headline */}
-          <h1 className="article-headline text-3xl sm:text-5xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-[1.15] mb-4">
+          <h1 className="article-headline text-2xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-[1.2] sm:leading-[1.15] mb-3 sm:mb-4">
             {article.title}
           </h1>
 
           {/* Subhead / Standfirst */}
-          <p className="text-base sm:text-xl font-serif text-[#4b5563] dark:text-[#9ca3af] leading-relaxed mb-6">
+          <p className="text-sm sm:text-lg lg:text-xl font-serif text-[#4b5563] dark:text-[#9ca3af] leading-relaxed mb-4 sm:mb-6">
             {article.summary}
           </p>
 

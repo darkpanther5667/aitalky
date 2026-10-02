@@ -10,16 +10,32 @@ interface LogoProps {
 }
 
 export function Logo({ className = "", showSubtitle = true, size = "md" }: LogoProps) {
-  const iconSize = size === "sm" ? 32 : size === "lg" ? 52 : 42;
-  const textSize = size === "sm" ? "text-2xl" : size === "lg" ? "text-5xl lg:text-6xl" : "text-3xl sm:text-4xl";
-  const subtextSize = size === "sm" ? "text-[8px] tracking-[0.2em]" : size === "lg" ? "text-[11px] tracking-[0.25em]" : "text-[9px] tracking-[0.22em]";
+  const emblemClasses =
+    size === "sm"
+      ? "w-7 h-7 sm:w-8 sm:h-8 rounded-xl"
+      : size === "lg"
+      ? "w-9 h-9 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl"
+      : "w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl";
+
+  const textSize =
+    size === "sm"
+      ? "text-xl sm:text-2xl"
+      : size === "lg"
+      ? "text-3xl sm:text-5xl lg:text-6xl"
+      : "text-2xl sm:text-3xl lg:text-4xl";
+
+  const subtextSize =
+    size === "sm"
+      ? "text-[7px] sm:text-[8px] tracking-[0.18em]"
+      : size === "lg"
+      ? "text-[8px] sm:text-[10px] lg:text-[11px] tracking-[0.2em] sm:tracking-[0.25em]"
+      : "text-[8px] sm:text-[9px] tracking-[0.2em]";
 
   return (
-    <Link href="/" className={`inline-flex items-center gap-3.5 group cursor-pointer ${className}`}>
+    <Link href="/" className={`inline-flex items-center gap-2.5 sm:gap-3.5 group cursor-pointer ${className}`}>
       {/* Precision Vector Emblem */}
       <div
-        className="relative shrink-0 flex items-center justify-center rounded-2xl bg-gradient-to-br from-[#181816] via-[#111110] to-[#0a0a09] border border-[#2c2c28] dark:border-[#383834] shadow-sm transition-transform duration-300 group-hover:scale-105"
-        style={{ width: iconSize, height: iconSize }}
+        className={`relative shrink-0 flex items-center justify-center bg-gradient-to-br from-[#181816] via-[#111110] to-[#0a0a09] border border-[#2c2c28] dark:border-[#383834] shadow-sm transition-transform duration-300 group-hover:scale-105 ${emblemClasses}`}
       >
         <svg
           viewBox="0 0 48 48"

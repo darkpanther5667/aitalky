@@ -98,59 +98,67 @@ export function EditorialHeader({
     { id: "policy", label: "Policy & Law" },
   ];
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
+  const fullDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
+  const shortDate = new Date().toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+
   return (
     <header className="border-b border-[#e8e8e6] dark:border-[#222220] bg-[var(--background)] transition-colors sticky top-0 z-40">
       {/* Top Meta Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af] border-b border-[#f0f0ee] dark:border-[#1a1a18]">
-        <div className="flex items-center gap-3">
-          <span>{currentDate}</span>
-          <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">•</span>
-          <span className="hidden sm:inline font-medium">Independent AI Journalism</span>
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-1.5 sm:py-2 flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af] border-b border-[#f0f0ee] dark:border-[#1a1a18]">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <span className="hidden sm:inline whitespace-nowrap">{fullDate}</span>
+          <span className="sm:hidden font-medium text-[#141413] dark:text-[#f3f3f0] whitespace-nowrap">{shortDate}</span>
+          <span className="hidden md:inline text-neutral-300 dark:text-neutral-700">•</span>
+          <span className="hidden md:inline font-medium whitespace-nowrap">Independent AI Journalism</span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           <button
             onClick={onPlayBriefing}
-            className={`flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-medium ${
+            className={`flex items-center gap-1 sm:gap-1.5 transition-colors cursor-pointer text-[11px] sm:text-xs font-medium whitespace-nowrap ${
               isAudioPlaying
                 ? "text-emerald-600 dark:text-emerald-400 font-semibold"
                 : "hover:text-black dark:hover:text-white"
             }`}
           >
-            <Volume2 className="w-3.5 h-3.5" />
-            <span>{isAudioPlaying ? "Playing Daily Audio Brief" : "Daily Audio Brief (3m)"}</span>
+            <Volume2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">{isAudioPlaying ? "Playing Daily Audio Brief" : "Daily Audio Brief (3m)"}</span>
+            <span className="sm:hidden">{isAudioPlaying ? "Playing..." : "Audio 3m"}</span>
           </button>
 
           <button
             onClick={onToggleSavedOnly}
-            className={`flex items-center gap-1 transition-colors cursor-pointer ${
+            className={`flex items-center gap-1 transition-colors cursor-pointer text-[11px] sm:text-xs whitespace-nowrap ${
               showingSavedOnly
                 ? "text-black dark:text-white font-semibold"
                 : "hover:text-black dark:hover:text-white"
             }`}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${showingSavedOnly ? "fill-current" : ""}`} />
+            <Bookmark className={`w-3.5 h-3.5 shrink-0 ${showingSavedOnly ? "fill-current" : ""}`} />
             <span className="hidden sm:inline">Saved</span>
-            <span>({savedCount})</span>
+            <span className="text-[11px]">({savedCount})</span>
           </button>
 
           <button
             onClick={toggleTheme}
-            className="hover:text-black dark:hover:text-white transition-colors cursor-pointer p-0.5"
+            className="hover:text-black dark:hover:text-white transition-colors cursor-pointer p-1 shrink-0"
             aria-label="Toggle dark mode"
           >
             {mounted && isDark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
           </button>
 
           {userEmail ? (
-            <div className="flex items-center gap-2 pl-2 border-l border-[#e8e8e6] dark:border-[#222220]">
+            <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-[#e8e8e6] dark:border-[#222220] shrink-0">
               {userAvatar ? (
                 <img
                   src={userAvatar}
@@ -168,7 +176,7 @@ export function EditorialHeader({
               <button
                 onClick={handleSignOut}
                 title="Sign Out"
-                className="text-[#9ca3af] hover:text-black dark:hover:text-white transition-colors cursor-pointer p-0.5"
+                className="text-[#9ca3af] hover:text-black dark:hover:text-white transition-colors cursor-pointer p-1"
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -176,7 +184,7 @@ export function EditorialHeader({
           ) : (
             <button
               onClick={() => setShowAuthModal(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#141413] dark:bg-[#f3f3f0] text-white dark:text-[#141413] text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded bg-[#141413] dark:bg-[#f3f3f0] text-white dark:text-[#141413] text-[11px] sm:text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer shrink-0"
             >
               <User className="w-3 h-3" />
               <span>Sign In</span>
@@ -186,23 +194,23 @@ export function EditorialHeader({
       </div>
 
       {/* Main Masthead */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-3.5 sm:py-7 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-6">
         <Logo size="lg" />
 
         {/* Search Bar */}
         <div className="w-full sm:w-72 relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
+          <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search stories, topics, reporters..."
+            placeholder="Search stories, topics, labs..."
             className="w-full bg-[#f4f4f2] dark:bg-[#1a1a18] border border-transparent focus:border-[#d1d5db] dark:focus:border-[#374151] rounded-full pl-9 pr-8 py-1.5 text-xs text-[#141413] dark:text-[#f3f3f0] placeholder:text-[#9ca3af] focus:outline-none transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => onSearchChange("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-black dark:hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af] hover:text-black dark:hover:text-white p-0.5"
             >
               <X className="w-3 h-3" />
             </button>
@@ -211,8 +219,8 @@ export function EditorialHeader({
       </div>
 
       {/* Clean Category Navigation */}
-      <nav className="border-t border-[#e8e8e6] dark:border-[#222220] overflow-x-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-start sm:justify-center gap-6 sm:gap-8 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap scrollbar-none">
+      <nav className="border-t border-[#e8e8e6] dark:border-[#222220] overflow-x-auto scrollbar-none">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 flex items-center justify-start sm:justify-center gap-4 sm:gap-8 py-2 text-xs sm:text-sm font-medium whitespace-nowrap scrollbar-none touch-pan-x">
           {categories.map((cat) => {
             const isSelected = !showingSavedOnly && currentCategory === cat.id;
             return (
@@ -222,7 +230,7 @@ export function EditorialHeader({
                   if (showingSavedOnly) onToggleSavedOnly();
                   onSelectCategory(cat.id);
                 }}
-                className={`transition-colors cursor-pointer py-1 ${
+                className={`transition-colors cursor-pointer py-1 shrink-0 ${
                   isSelected
                     ? "text-[#141413] dark:text-[#f3f3f0] font-semibold border-b-2 border-[#141413] dark:border-[#f3f3f0]"
                     : "text-[#6b7280] dark:text-[#9ca3af] hover:text-[#141413] dark:hover:text-[#f3f3f0]"

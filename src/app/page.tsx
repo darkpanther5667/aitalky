@@ -173,10 +173,10 @@ export default function HomePage() {
       />
 
       {/* Breaking News Ticker Line with 30-Minute Live Pulse */}
-      <div className="border-b border-[#e8e8e6] dark:border-[#222220] py-2 px-4 sm:px-6 bg-[#f4f4f2]/70 dark:bg-[#161614]/70 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 overflow-hidden">
-          <div className="flex items-center gap-3 overflow-hidden min-w-0">
-            <span className="font-semibold text-black dark:text-white uppercase tracking-wider shrink-0 text-[11px] flex items-center gap-1.5">
+      <div className="border-b border-[#e8e8e6] dark:border-[#222220] py-1.5 sm:py-2 px-3 sm:px-6 bg-[#f4f4f2]/70 dark:bg-[#161614]/70 text-xs">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 sm:gap-3 overflow-hidden">
+          <div className="flex items-center gap-2 sm:gap-3 overflow-hidden min-w-0">
+            <span className="font-semibold text-black dark:text-white uppercase tracking-wider shrink-0 text-[10px] sm:text-[11px] flex items-center gap-1.5">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -184,7 +184,7 @@ export default function HomePage() {
               Live Wire
             </span>
             <span className="text-neutral-300 dark:text-neutral-700 shrink-0">•</span>
-            <div className="flex items-center gap-6 overflow-x-auto whitespace-nowrap text-[#4b5563] dark:text-[#9ca3af] scrollbar-none">
+            <div className="flex items-center gap-4 sm:gap-6 overflow-x-auto whitespace-nowrap text-[#4b5563] dark:text-[#9ca3af] scrollbar-none text-[11px] sm:text-xs">
               {articles.length > 0 ? (
                 articles.slice(0, 6).map((art, idx) => (
                   <button
@@ -201,7 +201,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="shrink-0 flex items-center gap-2 pl-3 border-l border-[#e8e8e6] dark:border-[#222220]">
+          <div className="shrink-0 flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 border-l border-[#e8e8e6] dark:border-[#222220]">
             <span className="hidden sm:inline-block text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
               Syncs every 30m
             </span>
@@ -209,7 +209,7 @@ export default function HomePage() {
               onClick={() => loadFeeds(true)}
               disabled={isRefreshing}
               title="Force sync freshest AI news"
-              className="flex items-center gap-1 text-[11px] font-medium text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition px-2 py-0.5 rounded bg-white/80 dark:bg-neutral-800/80 border border-[#e8e8e6] dark:border-[#2a2a28] cursor-pointer"
+              className="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-[#4b5563] dark:text-[#9ca3af] hover:text-black dark:hover:text-white transition px-1.5 sm:px-2 py-0.5 rounded bg-white/80 dark:bg-neutral-800/80 border border-[#e8e8e6] dark:border-[#2a2a28] cursor-pointer"
             >
               <RotateCw className={`w-3 h-3 ${isRefreshing ? "animate-spin text-black dark:text-white" : ""}`} />
               <span>{isRefreshing ? "Syncing..." : "Sync"}</span>
@@ -219,7 +219,7 @@ export default function HomePage() {
       </div>
 
       {/* Main Frontpage Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-5 sm:py-12">
         {/* Saved Articles Banner if active */}
         {showingSavedOnly && (
           <div className="mb-8 pb-4 border-b border-[#e8e8e6] dark:border-[#222220] flex items-center justify-between">
