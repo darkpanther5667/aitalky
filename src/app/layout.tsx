@@ -55,19 +55,19 @@ export const metadata: Metadata = {
     apple: "/logo-icon.svg",
   },
   openGraph: {
-    title: "aitalky — Independent AI Journalism",
-    description: "Factual, minimal reporting on artificial intelligence research, models, and policy.",
+    title: "aitalky — Real-Time AI News & Research Aggregator",
+    description: "Curated real-time coverage of artificial intelligence breakthroughs, machine learning papers, and frontier models.",
     url: "https://aitalky.vercel.app",
     siteName: "aitalky",
     locale: "en_US",
     type: "website",
-    images: [{ url: "/logo.svg", width: 1200, height: 630, alt: "aitalky Logo" }],
+    images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "aitalky AI News" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "aitalky — News, Ideas & Analysis",
-    description: "Independent artificial intelligence journalism. Updated every 30 minutes.",
-    images: ["/logo.svg"],
+    title: "aitalky — Real-Time AI News & Research Aggregator",
+    description: "Curated real-time coverage of artificial intelligence breakthroughs, machine learning papers, and frontier models.",
+    images: ["/opengraph-image"],
     creator: "@aitalkynews",
   },
 };
@@ -121,6 +121,8 @@ const organizationSchema = {
   ],
 };
 
+import { ConsentBanner } from "@/components/ConsentBanner";
+
 export default function RootLayout({
   children,
 }: {
@@ -134,6 +136,21 @@ export default function RootLayout({
     >
       <head>
         <link rel="alternate" type="text/plain" href="https://aitalky.vercel.app/llms.txt" title="LLMs.txt" />
+        {/* Google Consent Mode v2 Default Setup */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                'ad_storage': 'denied',
+                'ad_user_data': 'denied',
+                'ad_personalization': 'denied',
+                'analytics_storage': 'denied'
+              });
+            `,
+          }}
+        />
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5606771623878852"
@@ -146,6 +163,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col font-sans bg-[var(--background)] text-[var(--foreground)] transition-colors">
         {children}
+        <ConsentBanner />
       </body>
     </html>
   );

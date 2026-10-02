@@ -10,20 +10,42 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "Editorial Inquiry",
+    subject: "Editorial Inquiry / Takedown Request",
     message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // Simulate submission
-    setTimeout(() => {
+    setErrorMessage("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (res.ok) {
+        setSubmitted(true);
+        setFormData({
+          name: "",
+          email: "",
+          subject: "Editorial Inquiry / Takedown Request",
+          message: "",
+        });
+      } else {
+        const data = await res.json();
+        setErrorMessage(data.error || "Failed to deliver message. Please use the direct email link.");
+      }
+    } catch {
+      setErrorMessage("Network error. Please email us directly at contact@aitalky.vercel.app.");
+    } finally {
       setIsSubmitting(false);
-      setSubmitted(true);
-    }, 800);
+    }
   };
 
   return (
@@ -53,10 +75,10 @@ export default function ContactPage() {
             Get in Touch
           </span>
           <h1 className="text-3xl sm:text-5xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-tight mb-3">
-            Contact the Newsroom
+            Contact &amp; Corrections Desk
           </h1>
           <p className="text-base sm:text-lg font-serif text-[#4b5563] dark:text-[#9ca3af] leading-relaxed">
-            Have a research breakthrough to share, a story correction, or a sponsorship inquiry? Reach our editorial desk below.
+            Publisher takedown requests, editorial corrections, research paper submissions, or general inquiries. We commit to a response within 24 hours.
           </p>
         </div>
 
@@ -64,90 +86,67 @@ export default function ContactPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
           <div className="p-5 rounded-lg bg-[#f4f4f2]/70 dark:bg-[#181816]/70 border border-[#e8e8e6] dark:border-[#2a2a28]">
             <div className="flex items-center gap-2 mb-2 font-semibold text-sm text-[#141413] dark:text-[#f3f3f0]">
-              <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Story Tips &amp; Preprints</span>
-            </div>
-            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2">
-              Send papers, release notes, or intelligence to our newsroom team.
-            </p>
-            <a href="mailto:editor@aitalky.news" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
-              editor@aitalky.news
-            </a>
-          </div>
-
-          <div className="p-5 rounded-lg bg-[#f4f4f2]/70 dark:bg-[#181816]/70 border border-[#e8e8e6] dark:border-[#2a2a28]">
-            <div className="flex items-center gap-2 mb-2 font-semibold text-sm text-[#141413] dark:text-[#f3f3f0]">
               <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <span>Corrections &amp; Accuracy</span>
+              <span>Corrections &amp; Takedowns</span>
             </div>
-            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2">
-              Report factual errors or citation issues for rapid review.
+            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2 leading-relaxed">
+              Publisher removals or factual corrections fulfilled within 24 hours.
             </p>
-            <a href="mailto:corrections@aitalky.news" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
-              corrections@aitalky.news
+            <a href="mailto:contact@aitalky.vercel.app?subject=Publisher%20Correction%20or%20Takedown" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
+              contact@aitalky.vercel.app
             </a>
           </div>
 
           <div className="p-5 rounded-lg bg-[#f4f4f2]/70 dark:bg-[#181816]/70 border border-[#e8e8e6] dark:border-[#2a2a28]">
             <div className="flex items-center gap-2 mb-2 font-semibold text-sm text-[#141413] dark:text-[#f3f3f0]">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span>Advertising &amp; Sponsorships</span>
+              <Mail className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Paper Submissions &amp; Tips</span>
             </div>
-            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2">
-              Direct newsletter sponsorships, dedicated AI showcase placements, or AdSense publisher coordination.
+            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2 leading-relaxed">
+              Submit newly published preprints, datasets, or laboratory releases.
             </p>
-            <a href="mailto:ads@aitalky.news" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
-              ads@aitalky.news
-            </a>
-          </div>
-
-          <div className="p-5 rounded-lg bg-[#f4f4f2]/70 dark:bg-[#181816]/70 border border-[#e8e8e6] dark:border-[#2a2a28]">
-            <div className="flex items-center gap-2 mb-2 font-semibold text-sm text-[#141413] dark:text-[#f3f3f0]">
-              <CheckCircle2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span>Legal &amp; Privacy Desk</span>
-            </div>
-            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-2">
-              GDPR, CCPA requests, or DMCA copyright notifications.
-            </p>
-            <a href="mailto:privacy@aitalky.news" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
-              privacy@aitalky.news
+            <a href="mailto:contact@aitalky.vercel.app?subject=Paper%20Submission" className="text-xs font-mono font-medium underline hover:text-black dark:hover:text-white">
+              contact@aitalky.vercel.app
             </a>
           </div>
         </div>
 
-        {/* Interactive Message Form */}
-        <div className="p-6 sm:p-8 rounded-xl bg-[#f4f4f2]/50 dark:bg-[#161614]/50 border border-[#e8e8e6] dark:border-[#222220]">
+        {/* Web Submission Form */}
+        <div className="p-6 sm:p-8 rounded-xl border border-[#e8e8e6] dark:border-[#222220] bg-[#fafaf8] dark:bg-[#141412]">
           <h2 className="text-xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] mb-2">
             Send an Editorial Message
           </h2>
-          <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-6">
-            Messages are routed directly to the duty editor on shift.
+          <p className="text-xs sm:text-sm text-[#6b7280] dark:text-[#9ca3af] mb-6">
+            Directly delivered to the newsroom desk. All submissions are logged and reviewed.
           </p>
 
           {submitted ? (
-            <div className="p-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
+            <div className="p-6 rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center space-y-2">
               <CheckCircle2 className="w-8 h-8 text-emerald-600 dark:text-emerald-400 mx-auto" />
-              <h3 className="text-base font-semibold text-emerald-900 dark:text-emerald-200">
-                Message Dispatched
+              <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-200">
+                Message Received
               </h3>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400 max-w-sm mx-auto">
-                Thank you for contacting aitalky. Our newsroom reviews correspondence on a rolling basis.
+              <p className="text-xs text-emerald-800 dark:text-emerald-300 max-w-md mx-auto">
+                Thank you for reaching out. The aitalky editorial team reviews all inquiries promptly. For urgent copyright or takedown notices, you will hear back within 24 hours.
               </p>
               <button
-                onClick={() => {
-                  setSubmitted(false);
-                  setFormData({ name: "", email: "", subject: "Editorial Inquiry", message: "" });
-                }}
-                className="mt-4 text-xs font-medium underline text-emerald-800 dark:text-emerald-300 cursor-pointer"
+                onClick={() => setSubmitted(false)}
+                className="mt-3 text-xs underline font-medium text-emerald-800 dark:text-emerald-300 cursor-pointer"
               >
                 Send another message
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {errorMessage && (
+                <div className="p-3 rounded bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300">
+                  {errorMessage}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
+                  <label className="block text-xs font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
                     Your Name
                   </label>
                   <input
@@ -155,12 +154,12 @@ export default function ContactPage() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g. Dr. Jane Doe"
-                    className="w-full px-3 py-2 rounded bg-white dark:bg-[#1f1f1d] border border-[#d1d5db] dark:border-[#383834] text-[#141413] dark:text-[#f3f3f0] focus:outline-none focus:border-black dark:focus:border-white transition"
+                    placeholder="Full name"
+                    className="w-full bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#2a2a28] rounded-md px-3 py-2 text-xs text-[#141413] dark:text-[#f3f3f0] placeholder:text-[#9ca3af] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
                   />
                 </div>
                 <div>
-                  <label className="block font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
+                  <label className="block text-xs font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
                     Email Address
                   </label>
                   <input
@@ -168,58 +167,53 @@ export default function ContactPage() {
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="jane@university.edu"
-                    className="w-full px-3 py-2 rounded bg-white dark:bg-[#1f1f1d] border border-[#d1d5db] dark:border-[#383834] text-[#141413] dark:text-[#f3f3f0] focus:outline-none focus:border-black dark:focus:border-white transition"
+                    placeholder="name@domain.com"
+                    className="w-full bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#2a2a28] rounded-md px-3 py-2 text-xs text-[#141413] dark:text-[#f3f3f0] placeholder:text-[#9ca3af] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
-                  Subject Area
+                <label className="block text-xs font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
+                  Subject / Topic
                 </label>
                 <select
                   value={formData.subject}
                   onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                  className="w-full px-3 py-2 rounded bg-white dark:bg-[#1f1f1d] border border-[#d1d5db] dark:border-[#383834] text-[#141413] dark:text-[#f3f3f0] focus:outline-none focus:border-black dark:focus:border-white transition"
+                  className="w-full bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#2a2a28] rounded-md px-3 py-2 text-xs text-[#141413] dark:text-[#f3f3f0] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
                 >
-                  <option value="Editorial Inquiry">Editorial &amp; Story Tip</option>
-                  <option value="Research Preprint">Academic Preprint Submission</option>
-                  <option value="Correction">Factual Correction Request</option>
-                  <option value="Advertising">Advertising &amp; Sponsorship</option>
-                  <option value="Copyright">DMCA / Copyright Notice</option>
+                  <option value="Editorial Inquiry / Takedown Request">Publisher Takedown / Content Removal</option>
+                  <option value="Factual Correction">Factual Correction / Misattribution</option>
+                  <option value="Research Preprint Submission">Paper / Research Preprint Submission</option>
+                  <option value="Sponsorship / Partnership">Advertising &amp; Sponsorship</option>
+                  <option value="Other">General Feedback</option>
                 </select>
               </div>
 
               <div>
-                <label className="block font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
-                  Message / Submission Details
+                <label className="block text-xs font-medium text-[#374151] dark:text-[#d1d5db] mb-1">
+                  Message / Details
                 </label>
                 <textarea
-                  required
                   rows={5}
+                  required
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                  placeholder="Include links to research preprints, laboratory releases, or specific details..."
-                  className="w-full px-3 py-2 rounded bg-white dark:bg-[#1f1f1d] border border-[#d1d5db] dark:border-[#383834] text-[#141413] dark:text-[#f3f3f0] focus:outline-none focus:border-black dark:focus:border-white transition font-sans"
-                />
+                  placeholder="Include any article URLs, citations, or relevant details..."
+                  className="w-full bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#2a2a28] rounded-md px-3 py-2 text-xs text-[#141413] dark:text-[#f3f3f0] placeholder:text-[#9ca3af] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
+                ></textarea>
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-6 py-2.5 rounded bg-[#141413] text-white dark:bg-[#f3f3f0] dark:text-[#141413] font-medium hover:opacity-90 transition flex items-center justify-center gap-2 cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#141413] dark:bg-[#f3f3f0] text-white dark:text-[#141413] text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>{isSubmitting ? "Transmitting..." : "Send Message"}</span>
               </button>
             </form>
           )}
-        </div>
-
-        {/* Verification Footnote */}
-        <div className="mt-8 text-center text-[11px] text-[#9ca3af]">
-          <span>aitalky Digital Media • Verified Publisher: <code>ca-pub-5606771623878852</code></span>
         </div>
       </main>
 

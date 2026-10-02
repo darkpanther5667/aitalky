@@ -1,116 +1,223 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchLiveNews } from "@/lib/rss-sources";
 import { getDbArticles, searchArticlesDb, upsertArticles } from "@/lib/db";
-import { Category, NewsFeedResponse } from "@/types/news";
+import { Article, Category } from "@/types/news";
 
 export const dynamic = "force-dynamic";
+
+// Basic in-memory IP rate limiter: max 60 requests per minute
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 1000 });
+    return true;
+  }
+  if (record.count >= 60) {
+    return false;
+  }
+  record.count++;
+  return true;
+}
+
+/**
+ * Sanitizes an article payload to excerpts and honest attribution only.
+ * Never leaks full scraped third-party text through the public API.
+ */
+function sanitizeForApi(article: Article) {
+  const hasAuthor = article.author && article.author !== article.source && !article.author.toLowerCase().includes("staff");
+  const authorDisplay = hasAuthor ? `${article.author} · via ${article.source}` : `via ${article.source}`;
+
+  return {
+    id: article.id,
+    slug: article.slug,
+    title: article.title,
+    summary: article.summary,
+    aiSummary: article.aiSummary || null,
+    whyItMatters: article.whyItMatters || null,
+    isAiSummary: Boolean(article.isAiSummary),
+    source: article.source,
+    sourceUrl: article.sourceUrl,
+    url: article.url,
+    publishedAt: article.publishedAt,
+    category: article.category,
+    readingTimeMinutes: article.readingTimeMinutes,
+    author: authorDisplay,
+    imageUrl: article.imageUrl || null,
+    alsoCoveredBy: article.alsoCoveredBy || [],
+    tags: article.tags || [],
+  };
+}
 
 let lastBackgroundSyncTime = 0;
 const THIRTY_MINUTES_MS = 30 * 60 * 1000;
 
 export async function GET(request: NextRequest) {
+  // Rate limiting check
+  const forwarded = request.headers.get("x-forwarded-for");
+  const ip = forwarded ? forwarded.split(",")[0].trim() : "127.0.0.1";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded. aitalky public API allows up to 60 requests per minute per IP." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const category = (searchParams.get("category") as Category) || undefined;
   const search = searchParams.get("q") || searchParams.get("search");
   const forceRefresh = searchParams.get("refresh") === "true";
 
-  // 1. Search directly via Supabase if query provided
+  // Pagination parameters with sensible limits
+  const pageParam = parseInt(searchParams.get("page") || "1", 10);
+  const page = isNaN(pageParam) || pageParam < 1 ? 1 : pageParam;
+
+  const limitParam = parseInt(searchParams.get("limit") || "20", 10);
+  const limit = isNaN(limitParam) || limitParam < 1 ? 20 : Math.min(limitParam, 50);
+
+  // 1. Search query
   if (search && search.trim()) {
     try {
-      const articles = await searchArticlesDb(search.trim());
-      const response: NewsFeedResponse = {
-        articles,
-        updatedAt: new Date().toISOString(),
-        totalCount: articles.length,
-      };
-      return NextResponse.json(response);
-    } catch (err) {
-      console.error("Search DB error:", err);
-    }
-  }
-
-  // 2. If forceRefresh is requested, fetch live feeds directly
-  if (forceRefresh) {
-    try {
-      const articles = await fetchLiveNews();
-      if (articles.length > 0) {
-        upsertArticles(articles).catch(console.error);
-      }
-      const filtered = category && category !== "all"
-        ? articles.filter((a) => a.category === category)
-        : articles;
+      const articles = await searchArticlesDb(search.trim(), 50);
+      const totalCount = articles.length;
+      const startIndex = (page - 1) * limit;
+      const paginated = articles.slice(startIndex, startIndex + limit);
 
       return NextResponse.json({
-        articles: filtered,
+        articles: paginated.map(sanitizeForApi),
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit) || 1,
+        },
         updatedAt: new Date().toISOString(),
-        totalCount: filtered.length,
-        fromCache: false,
       });
-    } catch (e) {
-      console.error("Force refresh error:", e);
+    } catch (err: any) {
+      return NextResponse.json({ error: "Failed to query articles" }, { status: 500 });
     }
   }
 
-  // 3. Database-first lookup for lightning-fast sub-50ms response
-  try {
-    const dbArticles = await getDbArticles(category, 50);
+  // 2. Force refresh
+  if (forceRefresh) {
+    try {
+      const live = await fetchLiveNews();
+      if (live.length > 0) {
+        upsertArticles(live).catch(console.error);
+      }
+      const filtered = category && category !== "all"
+        ? live.filter((a) => a.category === category)
+        : live;
 
-    // If we have database articles, return them immediately
-    if (dbArticles && dbArticles.length >= 10) {
-      // Check if we should trigger a background 30-minute sync
+      const totalCount = filtered.length;
+      const startIndex = (page - 1) * limit;
+      const paginated = filtered.slice(startIndex, startIndex + limit);
+
+      return NextResponse.json(
+        {
+          articles: paginated.map(sanitizeForApi),
+          pagination: {
+            page,
+            limit,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit) || 1,
+          },
+          updatedAt: new Date().toISOString(),
+          fromCache: false,
+        },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+          },
+        }
+      );
+    } catch {
+      return NextResponse.json({ error: "Failed to force refresh feeds" }, { status: 500 });
+    }
+  }
+
+  // 3. Database lookup with background sync
+  try {
+    const allDbArticles = await getDbArticles(category, 150);
+
+    if (allDbArticles && allDbArticles.length >= 5) {
       const now = Date.now();
       const oldestAcceptableTime = now - THIRTY_MINUTES_MS;
-      const newestArticleTime = new Date(dbArticles[0]?.publishedAt || 0).getTime();
+      const newestArticleTime = new Date(allDbArticles[0]?.publishedAt || 0).getTime();
 
-      // If newest article is > 30m old or last sync was > 15m ago, trigger non-blocking background sync
       if (newestArticleTime < oldestAcceptableTime || now - lastBackgroundSyncTime > 15 * 60 * 1000) {
         lastBackgroundSyncTime = now;
         fetchLiveNews()
           .then((fresh) => {
-            if (fresh.length > 0) {
-              return upsertArticles(fresh);
-            }
+            if (fresh.length > 0) return upsertArticles(fresh);
           })
-          .catch((err) => console.error("Background auto-sync error:", err));
+          .catch(console.error);
       }
+
+      const totalCount = allDbArticles.length;
+      const startIndex = (page - 1) * limit;
+      const paginated = allDbArticles.slice(startIndex, startIndex + limit);
 
       return NextResponse.json(
         {
-          articles: dbArticles,
-          updatedAt: dbArticles[0]?.publishedAt || new Date().toISOString(),
-          totalCount: dbArticles.length,
+          articles: paginated.map(sanitizeForApi),
+          pagination: {
+            page,
+            limit,
+            totalCount,
+            totalPages: Math.ceil(totalCount / limit) || 1,
+          },
+          updatedAt: allDbArticles[0]?.publishedAt || new Date().toISOString(),
           syncCadence: "every 30 minutes",
         },
         {
           headers: {
-            "Cache-Control": "public, s-maxage=900, stale-while-revalidate=1800",
+            "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
           },
         }
       );
     }
   } catch (dbErr) {
-    console.warn("DB-first query failed, falling back to live RSS:", dbErr);
+    console.warn("DB query fallback:", dbErr);
   }
 
-  // 4. Fallback to live RSS fetch if DB was empty or failed
+  // 4. Live RSS fallback
   try {
-    const articles = await fetchLiveNews();
-    if (articles.length > 0) {
-      upsertArticles(articles).catch(console.error);
+    const liveArticles = await fetchLiveNews();
+    if (liveArticles.length > 0) {
+      upsertArticles(liveArticles).catch(console.error);
     }
 
     const filtered = category && category !== "all"
-      ? articles.filter((a) => a.category === category)
-      : articles;
+      ? liveArticles.filter((a) => a.category === category)
+      : liveArticles;
 
-    return NextResponse.json({
-      articles: filtered,
-      updatedAt: new Date().toISOString(),
-      totalCount: filtered.length,
-      fromCache: false,
-    });
-  } catch (rssErr) {
-    console.error("Live RSS fetch failed:", rssErr);
-    return NextResponse.json({ error: "Failed to fetch news feed" }, { status: 500 });
+    const totalCount = filtered.length;
+    const startIndex = (page - 1) * limit;
+    const paginated = filtered.slice(startIndex, startIndex + limit);
+
+    return NextResponse.json(
+      {
+        articles: paginated.map(sanitizeForApi),
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages: Math.ceil(totalCount / limit) || 1,
+        },
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
+        },
+      }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: "Failed to fetch news feed" },
+      { status: 500 }
+    );
   }
 }

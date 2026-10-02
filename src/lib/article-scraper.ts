@@ -1,3 +1,5 @@
+import { cleanHtmlAndBoilerplate } from "./text-cleaner";
+
 interface ScrapedResult {
   content: string;
   imageUrl?: string;
@@ -6,29 +8,8 @@ interface ScrapedResult {
 
 const cache = new Map<string, ScrapedResult>();
 
-function cleanHtmlEntities(text: string): string {
-  if (!text) return "";
-  return text
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<noscript[^>]*>[\s\S]*?<\/noscript>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8216;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .replace(/&#8212;/g, "—")
-    .replace(/&#8211;/g, "–")
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function isJunkParagraph(text: string): boolean {
-  if (!text || text.length < 45) return true;
+  if (!text || text.length < 35) return true;
 
   const lower = text.toLowerCase();
 
@@ -69,7 +50,7 @@ function isJunkParagraph(text: string): boolean {
     return true;
   }
 
-  // Reject non-AI retail garbage if it somehow leaked into an AI story
+  // Reject non-AI retail garbage
   if (
     lower.includes("keyboard") ||
     lower.includes("soundbar") ||
@@ -83,71 +64,40 @@ function isJunkParagraph(text: string): boolean {
   return false;
 }
 
-function synthesizeFullEditorialStory(
-  title: string,
-  summary: string,
-  existingParagraphs: string[],
-  category: string
-): string {
-  const baseStory = existingParagraphs.length > 0 ? existingParagraphs.join("\n\n") : summary;
-
-  // Background context paragraph
-  const contextParagraph = `The announcement marks a strategic acceleration in the competitive race across the artificial intelligence sector. Over the past twelve months, enterprise teams and developers have consistently demanded greater autonomy, lower inference overhead, and more seamless software integration. This latest development directly addresses those operational pressures by refining how models interact with user workflows and external compute environments.`;
-
-  // Technical architecture & mechanism paragraph
-  const techParagraph = `From an architectural perspective, the focus has shifted markedly from static prompt completion to dynamic, persistent execution states. Rather than treating artificial intelligence as a disconnected query endpoint, modern engineering teams are embedding continuous agentic loops, sandboxed container runtime environments, and real-time state management. This ensures that autonomous operations remain reproducible and auditable across distributed infrastructure.`;
-
-  // Industry impact & adoption paragraph
-  const impactParagraph = `Industry analysts note that as foundational model providers push deeper into specialized application layers, the boundaries between general consumer chat interfaces and developer productivity platforms are dissolving. Organizations assessing deployment timelines emphasize that speed of iteration, deterministic error recovery, and data security will dictate which platforms achieve long-term enterprise lock-in.`;
-
-  // Looking forward paragraph
-  const conclusionParagraph = `As deployment progresses, the community will closely monitor benchmark evaluations, reliability metrics, and enterprise feedback. For full technical specifications, changelogs, and original documentation, readers can consult the primary reporting and official repository releases.`;
-
-  if (existingParagraphs.length >= 4) {
-    return existingParagraphs.join("\n\n");
-  }
-
-  return `${baseStory}\n\n${contextParagraph}\n\n${techParagraph}\n\n${impactParagraph}\n\n${conclusionParagraph}`;
-}
-
-function extractKeyPoints(paragraphs: string[], title: string, summary: string): string[] {
+/**
+ * Extracts real bullet points or factual key sentences from source text.
+ * Never invents or appends canned templates.
+ */
+function extractRealKeyPoints(paragraphs: string[]): string[] {
   const candidates = paragraphs
     .filter((p) => {
       if (isJunkParagraph(p)) return false;
-      if (p.length < 50 || p.length > 280) return false;
+      if (p.length < 50 || p.length > 250) return false;
       if (!p.endsWith(".")) return false;
       return p.split(" ").length >= 8;
     })
     .slice(0, 3);
 
-  if (candidates.length >= 3) {
-    return candidates;
-  }
-
-  return [
-    `${title} represents an impactful shift in capability and deployment across the artificial intelligence industry.`,
-    "Architectural enhancements focus on persistent execution, lower compute overhead, and autonomous reliability.",
-    "Early reception highlights significant implications for developer workflows, model governance, and enterprise adoption.",
-  ];
+  return candidates;
 }
 
 export async function scrapeFullArticle(
   url: string,
   title: string,
-  fallbackSummary: string,
-  category: string
+  fallbackSummary: string
 ): Promise<ScrapedResult> {
+  const cleanFallback = cleanHtmlAndBoilerplate(fallbackSummary);
+
   if (!url || url.startsWith("http://localhost")) {
-    const full = synthesizeFullEditorialStory(title, fallbackSummary, [], category);
     return {
-      content: full,
-      keyPoints: extractKeyPoints([], title, fallbackSummary),
+      content: cleanFallback,
+      keyPoints: [],
     };
   }
 
-  // Clear or validate cached item
+  // Check cache
   const cached = cache.get(url);
-  if (cached && !cached.content.includes("email digest") && !cached.content.includes("Vox Media")) {
+  if (cached) {
     return cached;
   }
 
@@ -200,7 +150,7 @@ export async function scrapeFullArticle(
 
     for (const match of pMatches) {
       const rawText = match[1];
-      const cleaned = cleanHtmlEntities(rawText);
+      const cleaned = cleanHtmlAndBoilerplate(rawText);
 
       if (isJunkParagraph(cleaned)) {
         continue;
@@ -216,22 +166,28 @@ export async function scrapeFullArticle(
       paragraphs.push(cleaned);
     }
 
-    const fullContent = synthesizeFullEditorialStory(title, fallbackSummary, paragraphs, category);
-    const keyPoints = extractKeyPoints(paragraphs, title, fallbackSummary);
+    // Honest extraction: Do NOT republish full third-party articles. Keep 1-2 excerpts only, or fallback summary.
+    let honestContent = "";
+    if (paragraphs.length > 0) {
+      honestContent = paragraphs.slice(0, 3).join("\n\n");
+    } else {
+      honestContent = cleanFallback;
+    }
+
+    const keyPoints = extractRealKeyPoints(paragraphs);
 
     const result: ScrapedResult = {
-      content: fullContent,
+      content: honestContent,
       imageUrl,
       keyPoints,
     };
 
     cache.set(url, result);
     return result;
-  } catch (err) {
-    const fullContent = synthesizeFullEditorialStory(title, fallbackSummary, [], category);
+  } catch {
     const result: ScrapedResult = {
-      content: fullContent,
-      keyPoints: extractKeyPoints([], title, fallbackSummary),
+      content: cleanFallback,
+      keyPoints: [],
     };
     cache.set(url, result);
     return result;

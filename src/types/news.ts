@@ -6,6 +6,12 @@ export type Category =
   | "culture"
   | "policy";
 
+export interface AlsoCoveredBy {
+  source: string;
+  url: string;
+  title?: string;
+}
+
 export interface Article {
   id: string;
   slug: string;
@@ -25,6 +31,10 @@ export interface Article {
   tags: string[];
   views?: number;
   likes?: number;
+  alsoCoveredBy?: AlsoCoveredBy[];
+  aiSummary?: string;
+  whyItMatters?: string;
+  isAiSummary?: boolean;
 }
 
 export interface NewsFeedResponse {

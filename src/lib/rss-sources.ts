@@ -1,5 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
-import { Article, Category } from "@/types/news";
+import { Article, Category, AlsoCoveredBy } from "@/types/news";
+import { cleanHtmlAndBoilerplate, cleanExcerpt, cleanUrl, cleanSlug } from "./text-cleaner";
+import { categorizeArticle } from "./categorizer";
 
 interface FeedSource {
   name: string;
@@ -117,15 +119,7 @@ const FEED_SOURCES: FeedSource[] = [
   },
 ];
 
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 85);
-}
+export { cleanSlug as slugify };
 
 export function isAiRelevant(title: string, summary: string, sourceName?: string): boolean {
   const text = `${title} ${summary}`.toLowerCase();
@@ -156,7 +150,7 @@ export function isAiRelevant(title: string, summary: string, sourceName?: string
     return true;
   }
 
-  // Mandatory match for authentic artificial intelligence & machine learning domains (including plurals)
+  // Mandatory match for authentic artificial intelligence & machine learning domains
   const aiKeywords = [
     "ai", "artificial intelligence", "machine learning", "deep learning", "neural",
     "llm", "llms", "large language model", "large language models", "gpt", "claude", "deepseek", "gemini", "llama",
@@ -174,72 +168,131 @@ export function isAiRelevant(title: string, summary: string, sourceName?: string
   });
 }
 
-const CATEGORY_IMAGES: Record<Category, string[]> = {
-  industry: [
-    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80",
-  ],
-  research: [
-    "https://images.unsplash.com/photo-1507413245164-6160d8298b31?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=1200&q=80",
-  ],
-  products: [
-    "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80",
-  ],
-  culture: [
-    "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1501504905252-473c47e087f8?auto=format&fit=crop&w=1200&q=80",
-  ],
-  policy: [
-    "https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?auto=format&fit=crop&w=1200&q=80",
-    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80",
-  ],
-  all: [
-    "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-  ],
-};
+/**
+ * Extracts authentic image from RSS item enclosures, media tags, or inline HTML.
+ * Never assigns synthetic stock photos.
+ */
+function extractAuthenticImage(item: any, rawHtml: string = ""): string | undefined {
+  // 1. Enclosure tag
+  if (item.enclosure) {
+    const enc = Array.isArray(item.enclosure) ? item.enclosure[0] : item.enclosure;
+    const url = enc?.["@_url"] || enc?.url;
+    const type = enc?.["@_type"] || enc?.type || "";
+    if (url && (type.startsWith("image/") || /\.(jpe?g|png|webp|avif)/i.test(url))) {
+      return url;
+    }
+  }
 
-function pickEditorialImage(category: Category, index: number): string {
-  const list = CATEGORY_IMAGES[category] || CATEGORY_IMAGES.all;
-  return list[index % list.length];
+  // 2. Media:content
+  if (item["media:content"]) {
+    const media = Array.isArray(item["media:content"]) ? item["media:content"][0] : item["media:content"];
+    const url = media?.["@_url"] || media?.url;
+    if (url && !url.includes("blank.gif") && !url.includes("1x1")) {
+      return url;
+    }
+  }
+
+  // 3. Media:thumbnail
+  if (item["media:thumbnail"]) {
+    const thumb = Array.isArray(item["media:thumbnail"]) ? item["media:thumbnail"][0] : item["media:thumbnail"];
+    const url = thumb?.["@_url"] || thumb?.url;
+    if (url && !url.includes("blank.gif")) {
+      return url;
+    }
+  }
+
+  // 4. iTunes image
+  if (item["itunes:image"]) {
+    const itunes = item["itunes:image"];
+    const url = itunes?.["@_href"] || itunes?.href;
+    if (url) return url;
+  }
+
+  // 5. Parse inline <img> from HTML description if present
+  if (rawHtml) {
+    const imgMatch = rawHtml.match(/<img[^>]+src=["'](https?:\/\/[^"']+)["']/i);
+    if (imgMatch && imgMatch[1] && !imgMatch[1].includes("tracking") && !imgMatch[1].includes("1x1")) {
+      return imgMatch[1];
+    }
+  }
+
+  return undefined;
 }
 
-function cleanHtml(html: string): string {
-  if (!html) return "";
-  return html
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#8217;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .replace(/&#8212;/g, "—")
-    .replace(/\s+/g, " ")
-    .trim();
+/**
+ * Extracts significant tokens for title clustering.
+ */
+function getTitleTokens(title: string): Set<string> {
+  const stopWords = new Set([
+    "the", "a", "an", "is", "in", "to", "for", "of", "and", "on", "with", "as", "at", "by", "that", "this", "from",
+    "its", "it", "are", "be", "has", "have", "had", "will", "how", "what", "why", "when", "where", "who", "all",
+    "new", "more", "first", "says", "said", "over", "into", "about", "after"
+  ]);
+  const words = title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !stopWords.has(w));
+  return new Set(words);
 }
 
-function detectCategory(title: string, summary: string, fallback: Category): Category {
-  const combined = `${title} ${summary}`.toLowerCase();
-  if (combined.includes("policy") || combined.includes("regulation") || combined.includes("law") || combined.includes("eu") || combined.includes("court") || combined.includes("copyright") || combined.includes("congress")) {
-    return "policy";
+function calculateSimilarity(setA: Set<string>, setB: Set<string>): number {
+  if (setA.size === 0 || setB.size === 0) return 0;
+  let intersection = 0;
+  for (const item of setA) {
+    if (setB.has(item)) intersection++;
   }
-  if (combined.includes("artist") || combined.includes("music") || combined.includes("film") || combined.includes("culture") || combined.includes("society") || combined.includes("ethic") || combined.includes("work")) {
-    return "culture";
+  const union = setA.size + setB.size - intersection;
+  return union === 0 ? 0 : intersection / union;
+}
+
+/**
+ * Deduplicates and clusters stories covering the same news event into primary cards + alsoCoveredBy links.
+ */
+export function deduplicateAndClusterArticles(articles: Article[]): Article[] {
+  const clusters: Article[] = [];
+
+  for (const current of articles) {
+    const currentTokens = getTitleTokens(current.title);
+    const currentTime = new Date(current.publishedAt).getTime();
+
+    // Check if current matches an existing cluster within 12 hours
+    let matchedCluster: Article | null = null;
+    for (const primary of clusters) {
+      const primaryTime = new Date(primary.publishedAt).getTime();
+      const timeDiffHours = Math.abs(currentTime - primaryTime) / (1000 * 60 * 60);
+
+      if (timeDiffHours <= 12) {
+        const primaryTokens = getTitleTokens(primary.title);
+        const sim = calculateSimilarity(currentTokens, primaryTokens);
+        if (sim >= 0.45) {
+          matchedCluster = primary;
+          break;
+        }
+      }
+    }
+
+    if (matchedCluster) {
+      // Avoid duplicate source links in alsoCoveredBy
+      if (!matchedCluster.alsoCoveredBy) {
+        matchedCluster.alsoCoveredBy = [];
+      }
+      if (
+        matchedCluster.source !== current.source &&
+        !matchedCluster.alsoCoveredBy.some((cov) => cov.source === current.source)
+      ) {
+        matchedCluster.alsoCoveredBy.push({
+          source: current.source,
+          url: current.url,
+          title: current.title,
+        });
+      }
+    } else {
+      clusters.push({ ...current, alsoCoveredBy: current.alsoCoveredBy || [] });
+    }
   }
-  if (combined.includes("arxiv") || combined.includes("paper") || combined.includes("math") || combined.includes("benchmark") || combined.includes("study") || combined.includes("theory") || combined.includes("researcher")) {
-    return "research";
-  }
-  if (combined.includes("tool") || combined.includes("app") || combined.includes("release") || combined.includes("feature") || combined.includes("update") || combined.includes("agent") || combined.includes("model") || combined.includes("weights")) {
-    return "products";
-  }
-  return fallback;
+
+  return clusters;
 }
 
 export async function fetchLiveNews(): Promise<Article[]> {
@@ -250,7 +303,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
 
   const parsedArticles: Article[] = [];
 
-  const fetchPromises = FEED_SOURCES.map(async (source, sourceIdx) => {
+  const fetchPromises = FEED_SOURCES.map(async (source) => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 6500);
@@ -280,9 +333,9 @@ export async function fetchLiveNews(): Promise<Article[]> {
 
         return entries.slice(0, 8).map((entry: any, i: number) => {
           const rawTitle = typeof entry.title === "string" ? entry.title : entry.title?.["#text"] || entry.title?.["@_text"] || "";
-          const cleanTitle = cleanHtml(rawTitle).replace(/^\[.*?\]\s*/, "");
+          const cleanTitle = cleanHtmlAndBoilerplate(rawTitle).replace(/^\[.*?\]\s*/, "");
           const rawSummary = entry.summary || "";
-          const cleanSummary = cleanHtml(typeof rawSummary === "string" ? rawSummary : rawSummary?.["#text"] || "");
+          const cleanSummary = cleanHtmlAndBoilerplate(typeof rawSummary === "string" ? rawSummary : rawSummary?.["#text"] || "");
 
           if (!isAiRelevant(cleanTitle, cleanSummary, source.name)) {
             return null;
@@ -294,6 +347,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
           } else if (entry.author?.name) {
             authorName = entry.author.name;
           }
+          authorName = cleanHtmlAndBoilerplate(authorName);
 
           let link = entry.link;
           if (Array.isArray(link)) {
@@ -304,10 +358,11 @@ export async function fetchLiveNews(): Promise<Article[]> {
           } else if (typeof link !== "string") {
             link = entry.id || source.homepage;
           }
+          link = cleanUrl(link);
 
           const publishedAt = entry.published || entry.updated || new Date().toISOString();
-          const slug = slugify(cleanTitle) || `arxiv-${Date.now().toString(36)}-${i}`;
-          const summary = cleanSummary.slice(0, 280) + (cleanSummary.length > 280 ? "..." : "");
+          const slug = cleanSlug(cleanTitle) || `arxiv-${Date.now().toString(36)}-${i}`;
+          const summary = cleanExcerpt(cleanSummary, 280);
 
           return {
             id: `arxiv-${i}-${slug.slice(0, 20)}`,
@@ -322,14 +377,13 @@ export async function fetchLiveNews(): Promise<Article[]> {
             category: "research" as Category,
             readingTimeMinutes: Math.max(3, Math.ceil(cleanSummary.split(" ").length / 150)),
             author: authorName,
-            authorRole: "arXiv Submission",
-            imageUrl: pickEditorialImage("research", sourceIdx * 5 + i),
+            imageUrl: undefined, // No fake stock photos
             tags: ["Research", "arXiv", "Machine Learning"],
           } as Article;
         }).filter(Boolean);
       }
 
-      // Handle standard RSS & Atom feeds (TechCrunch, DeepMind, OpenAI, HuggingFace, SiliconANGLE)
+      // Handle standard RSS & Atom feeds
       let rawItems: any[] = [];
       if (parsed?.rss?.channel?.item) {
         rawItems = Array.isArray(parsed.rss.channel.item)
@@ -343,11 +397,11 @@ export async function fetchLiveNews(): Promise<Article[]> {
 
       return rawItems.slice(0, 10).map((item, idx) => {
         const rawTitle = typeof item.title === "string" ? item.title : item.title?.["#text"] || item.title?.["@_text"] || item.title?.text || "News Update";
-        const cleanTitle = cleanHtml(rawTitle).replace(/^\[.*?\]\s*/, "");
+        const cleanTitle = cleanHtmlAndBoilerplate(rawTitle).replace(/^\[.*?\]\s*/, "");
         const rawDesc = item.description || item.summary || item["content:encoded"] || item.content || "";
-        const cleanDesc = cleanHtml(typeof rawDesc === "string" ? rawDesc : rawDesc?.["#text"] || rawDesc?.["@_text"] || "");
+        const rawDescString = typeof rawDesc === "string" ? rawDesc : rawDesc?.["#text"] || rawDesc?.["@_text"] || "";
+        const cleanDesc = cleanHtmlAndBoilerplate(rawDescString);
 
-        // STRICT AI RELEVANCE CHECK: reject keyboards, TVs, gaming discounts, non-AI content
         if (!isAiRelevant(cleanTitle, cleanDesc, source.name)) {
           return null;
         }
@@ -361,6 +415,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
         } else if (typeof link !== "string") {
           link = source.homepage;
         }
+        link = cleanUrl(link);
 
         const pubDateRaw = item.pubDate || item.published || item.updated;
         let publishedAt = new Date().toISOString();
@@ -371,22 +426,27 @@ export async function fetchLiveNews(): Promise<Article[]> {
           }
         }
 
-        const finalContent = cleanDesc.length > 20
-          ? cleanDesc
-          : `${cleanTitle}. Continuous intelligence monitoring and analysis conducted by the ${source.name} desk for aitalky.`;
+        const summary = cleanExcerpt(cleanDesc, 260) || cleanTitle;
+        const category = categorizeArticle({
+          title: cleanTitle,
+          summary: cleanDesc,
+          source: source.name,
+          defaultCategory: source.defaultCategory,
+        });
 
-        const category = detectCategory(cleanTitle, finalContent, source.defaultCategory);
-        const summary = finalContent.slice(0, 260) + (finalContent.length > 260 ? "..." : "");
-        const readingTimeMinutes = Math.max(2, Math.ceil(finalContent.split(" ").length / 180));
-        const slug = slugify(cleanTitle) || `news-${Date.now().toString(36)}-${idx}`;
-        const author = item["dc:creator"] || item.author?.name || `${source.name} Staff`;
+        const readingTimeMinutes = Math.max(2, Math.ceil(cleanDesc.split(" ").length / 180));
+        const slug = cleanSlug(cleanTitle) || `news-${Date.now().toString(36)}-${idx}`;
+        const rawAuthor = item["dc:creator"] || item.author?.name || `${source.name} Staff`;
+        const author = cleanHtmlAndBoilerplate(rawAuthor);
+
+        const imageUrl = extractAuthenticImage(item, rawDescString);
 
         return {
           id: `feed-${source.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${idx}-${slug.slice(0, 20)}`,
           slug,
           title: cleanTitle,
-          summary: summary || "Read the complete in-depth coverage on the original source publication.",
-          content: finalContent,
+          summary,
+          content: cleanDesc || summary,
           source: source.name,
           sourceUrl: source.homepage,
           url: link,
@@ -394,9 +454,8 @@ export async function fetchLiveNews(): Promise<Article[]> {
           category,
           readingTimeMinutes,
           author,
-          authorRole: `${source.name} Correspondent`,
-          imageUrl: pickEditorialImage(category, sourceIdx * 4 + idx),
-          tags: ["News", source.name, "AI"],
+          imageUrl, // authentic image or undefined
+          tags: ["AI", source.name, category],
         } as Article;
       }).filter(Boolean);
     } catch {
@@ -411,13 +470,8 @@ export async function fetchLiveNews(): Promise<Article[]> {
     }
   });
 
-  // Deduplicate by normalized title & slug
-  const seenSlugs = new Set<string>();
-  const uniqueArticles = parsedArticles.filter((art) => {
-    if (!art || !art.slug || seenSlugs.has(art.slug) || art.title.length < 10) return false;
-    seenSlugs.add(art.slug);
-    return true;
-  });
+  // Deduplicate and cluster multi-source coverage
+  const uniqueArticles = deduplicateAndClusterArticles(parsedArticles);
 
   // Sort chronologically: freshest first
   uniqueArticles.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());

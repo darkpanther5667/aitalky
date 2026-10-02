@@ -13,7 +13,7 @@ export function EditorialFooter() {
           <div className="md:col-span-2 space-y-4">
             <Logo size="md" showSubtitle={true} />
             <p className="max-w-sm text-xs leading-relaxed text-[#4b5563] dark:text-[#9ca3af] mt-2">
-              An independent, typographic news publication covering the breakthroughs, science, economics, and ethics of artificial intelligence. Refreshed continuously every 30 minutes.
+              An independent, typographic news publication covering the breakthroughs, science, economics, and ethics of artificial intelligence. Refreshed continuously every 30 minutes from global industry feeds and arXiv.
             </p>
             <div className="flex items-center gap-2 pt-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-300/40">
@@ -30,28 +30,33 @@ export function EditorialFooter() {
             </span>
             <ul className="space-y-2">
               <li>
-                <Link href="/?category=industry" className="hover:text-black dark:hover:text-white transition">
+                <Link href="/category/industry" className="hover:text-black dark:hover:text-white transition">
                   Industry & Enterprise
                 </Link>
               </li>
               <li>
-                <Link href="/?category=research" className="hover:text-black dark:hover:text-white transition">
+                <Link href="/category/research" className="hover:text-black dark:hover:text-white transition">
                   Research & Science (arXiv)
                 </Link>
               </li>
               <li>
-                <Link href="/?category=products" className="hover:text-black dark:hover:text-white transition">
+                <Link href="/category/products" className="hover:text-black dark:hover:text-white transition">
                   Models & Developer Tools
                 </Link>
               </li>
               <li>
-                <Link href="/?category=policy" className="hover:text-black dark:hover:text-white transition">
+                <Link href="/category/policy" className="hover:text-black dark:hover:text-white transition">
                   Policy, Law & Governance
                 </Link>
               </li>
               <li>
-                <Link href="/?category=culture" className="hover:text-black dark:hover:text-white transition">
+                <Link href="/category/culture" className="hover:text-black dark:hover:text-white transition">
                   Culture & Human Impact
+                </Link>
+              </li>
+              <li>
+                <Link href="/brief" className="text-amber-600 dark:text-amber-400 font-semibold hover:underline">
+                  Daily Brief Synthesis ↗
                 </Link>
               </li>
             </ul>
@@ -65,12 +70,17 @@ export function EditorialFooter() {
             <ul className="space-y-2">
               <li>
                 <Link href="/about" className="hover:text-black dark:hover:text-white transition">
-                  About the Publication
+                  About aitalky
+                </Link>
+              </li>
+              <li>
+                <Link href="/about#ethics" className="hover:text-black dark:hover:text-white transition">
+                  Editorial Ethics & AI Policy
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-black dark:hover:text-white transition">
-                  Privacy Policy
+                  Privacy Policy & Cookies
                 </Link>
               </li>
               <li>
@@ -80,12 +90,7 @@ export function EditorialFooter() {
               </li>
               <li>
                 <Link href="/contact" className="hover:text-black dark:hover:text-white transition">
-                  Contact & Inquiries
-                </Link>
-              </li>
-              <li>
-                <Link href="/about#ethics" className="hover:text-black dark:hover:text-white transition">
-                  Editorial Ethics & AI Policy
+                  Contact & Corrections
                 </Link>
               </li>
             </ul>
@@ -103,18 +108,18 @@ export function EditorialFooter() {
                 </a>
               </li>
               <li>
-                <a href="/llms-full.txt" target="_blank" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
-                  /llms-full.txt (Full Corpus)
-                </a>
-              </li>
-              <li>
                 <a href="/sitemap.xml" target="_blank" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
                   /sitemap.xml
                 </a>
               </li>
               <li>
+                <a href="/news-sitemap.xml" target="_blank" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
+                  /news-sitemap.xml (Google News)
+                </a>
+              </li>
+              <li>
                 <a href="/ads.txt" target="_blank" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
-                  /ads.txt (AdSense Verification)
+                  /ads.txt (AdSense)
                 </a>
               </li>
               <li>
@@ -129,14 +134,14 @@ export function EditorialFooter() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#9ca3af]">
           <div>
-            &copy; {currentYear} aitalky Media Group. All rights reserved.
+            &copy; {currentYear} aitalky. All rights reserved.
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <Link href="/privacy" className="hover:underline">Privacy</Link>
             <span>•</span>
             <Link href="/terms" className="hover:underline">Terms</Link>
             <span>•</span>
-            <Link href="/about" className="hover:underline">Ethics</Link>
+            <Link href="/about#ethics" className="hover:underline">Ethics</Link>
             <span>•</span>
             <Link href="/contact" className="hover:underline">Contact</Link>
           </div>

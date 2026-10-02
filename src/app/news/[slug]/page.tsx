@@ -1,15 +1,18 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import Link from "next/link";
 import { getArticleBySlug, fetchLiveNews } from "@/lib/rss-sources";
 import { scrapeFullArticle } from "@/lib/article-scraper";
-import { getDbArticleBySlug, getDbArticles, incrementArticleViews, upsertArticle } from "@/lib/db";
+import { getDbArticleBySlug, getDbArticles, getSlugRedirect, incrementArticleViews, upsertArticle } from "@/lib/db";
 import { Article } from "@/types/news";
-import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, Calendar, ExternalLink, Sparkles } from "lucide-react";
 import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { ArticleActions } from "@/components/ArticleActions";
 import { Logo } from "@/components/Logo";
 import { EditorialFooter } from "@/components/EditorialFooter";
+import { TypographicCardFallback } from "@/components/TypographicCardFallback";
+
+export const revalidate = 1800; // 30-minute ISR
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -29,6 +32,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   if (!article) {
+    const redirectSlug = await getSlugRedirect(slug);
+    if (redirectSlug) {
+      article = await getDbArticleBySlug(redirectSlug);
+    }
+  }
+
+  if (!article) {
     return {
       title: "Story Not Found — aitalky News",
       description: "The requested news article could not be found.",
@@ -37,11 +47,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const siteUrl = "https://aitalky.vercel.app";
   const canonicalUrl = `${siteUrl}/news/${article.slug}`;
-  const ogImage = article.imageUrl || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
+  const ogImage = article.imageUrl ? `${siteUrl}/api/og?slug=${article.slug}` : `${siteUrl}/og-default.png`;
 
   return {
     title: `${article.title} — aitalky`,
-    description: article.summary,
+    description: article.aiSummary || article.summary,
     alternates: {
       canonical: canonicalUrl,
       types: {
@@ -49,15 +59,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     },
     other: {
-      "citation_title": article.title,
-      "citation_author": article.author,
-      "citation_publication_date": article.publishedAt.slice(0, 10),
-      "citation_online_date": article.publishedAt.slice(0, 10),
-      "citation_journal_title": "aitalky",
+      citation_title: article.title,
+      citation_author: article.author,
+      citation_publication_date: article.publishedAt.slice(0, 10),
+      citation_online_date: article.publishedAt.slice(0, 10),
+      citation_journal_title: "aitalky",
     },
     openGraph: {
       title: article.title,
-      description: article.summary,
+      description: article.aiSummary || article.summary,
       url: canonicalUrl,
       siteName: "aitalky News",
       locale: "en_US",
@@ -78,7 +88,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     twitter: {
       card: "summary_large_image",
       title: article.title,
-      description: article.summary,
+      description: article.aiSummary || article.summary,
       images: [ogImage],
       creator: "@aitalkynews",
     },
@@ -88,7 +98,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function NewsArticlePage({ params }: PageProps) {
   const { slug } = await params;
 
-  // 1. Try DB first for instant sub-50ms load
+  // 1. Check for 301 slug redirect from old un-decoded entity slugs
+  const redirectTarget = await getSlugRedirect(slug);
+  if (redirectTarget && redirectTarget !== slug) {
+    permanentRedirect(`/news/${redirectTarget}`);
+  }
+
+  // 2. Try DB first
   let article: Article | null = null;
   try {
     article = await getDbArticleBySlug(slug);
@@ -115,14 +131,14 @@ export default async function NewsArticlePage({ params }: PageProps) {
   let heroImage = article.imageUrl;
   let keyPoints = article.keyPoints || [];
 
-  // If content is brief, enrich with scraper safely
-  if (!article.content || article.content.split("\n\n").length < 3) {
+  // Scrape only if content is too brief, without inventing filler
+  if (!article.content || article.content.split("\n\n").length < 2) {
     try {
-      const scraped = await scrapeFullArticle(article.url, article.title, article.summary, article.category);
+      const scraped = await scrapeFullArticle(article.url, article.title, article.summary);
       if (scraped.content) {
         fullBody = scraped.content;
       }
-      if (scraped.imageUrl) {
+      if (scraped.imageUrl && !heroImage) {
         heroImage = scraped.imageUrl;
       }
       if (scraped.keyPoints && scraped.keyPoints.length > 0) {
@@ -140,7 +156,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
     }
   }
 
-  // Fetch related articles from database first for instant performance
+  // Fetch related articles
   let relatedArticles: Article[] = [];
   try {
     const dbArticles = await getDbArticles(article.category, 5);
@@ -162,58 +178,56 @@ export default async function NewsArticlePage({ params }: PageProps) {
   });
 
   const readingTimeMinutes = Math.max(2, Math.ceil(fullBody.split(" ").length / 180));
-
   const siteUrl = "https://aitalky.vercel.app";
   const canonicalUrl = `${siteUrl}/news/${article.slug}`;
 
-  // Schema.org JSON-LD NewsArticle Structured Data for Google News & LLM Citation Engines
+  // Honest Schema.org NewsArticle or TechArticle Structured Data with isBasedOn citation
+  const isResearch = article.category === "research";
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "NewsArticle",
-    "headline": article.title,
-    "image": [
-      heroImage || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80"
-    ],
-    "datePublished": article.publishedAt,
-    "dateModified": article.publishedAt,
-    "author": [
+    "@type": isResearch ? "TechArticle" : "NewsArticle",
+    headline: article.title,
+    image: heroImage ? [heroImage] : [`${siteUrl}/og-default.png`],
+    datePublished: article.publishedAt,
+    dateModified: article.publishedAt,
+    author: [
       {
         "@type": "Person",
-        "name": article.author,
-        "jobTitle": article.authorRole || `${article.source} Correspondent`,
-      }
+        name: article.author || `${article.source} Staff`,
+      },
     ],
-    "publisher": {
+    publisher: {
       "@type": "NewsMediaOrganization",
-      "name": "aitalky",
-      "url": siteUrl,
-      "logo": {
+      name: "aitalky",
+      url: siteUrl,
+      logo: {
         "@type": "ImageObject",
-        "url": `${siteUrl}/globe.svg`
-      }
+        url: `${siteUrl}/og-default.png`,
+      },
     },
-    "description": article.summary,
-    "articleBody": fullBody,
-    "isAccessibleForFree": true,
-    "inLanguage": "en-US",
-    "keywords": (article.tags || ["AI", "Artificial Intelligence", "Machine Learning"]).join(", "),
-    "mainEntityOfPage": {
+    description: article.aiSummary || article.summary,
+    articleBody: fullBody,
+    isBasedOn: article.url,
+    citation: article.url,
+    isAccessibleForFree: true,
+    inLanguage: "en-US",
+    keywords: (article.tags || ["AI", "Artificial Intelligence"]).join(", "),
+    mainEntityOfPage: {
       "@type": "WebPage",
       "@id": canonicalUrl,
     },
-    "articleSection": article.category,
-    "wordCount": fullBody.split(" ").length,
-    "speakable": {
-      "@type": "SpeakableSpecification",
-      "cssSelector": [".article-headline", ".article-takeaways"]
-    }
+    articleSection: article.category,
+    wordCount: fullBody.split(" ").length,
   };
 
   const paragraphs = fullBody.split("\n\n").filter((p) => p.trim().length > 0);
 
+  // Honest attribution
+  const hasAuthor = article.author && article.author !== article.source && !article.author.toLowerCase().includes("staff");
+  const authorDisplay = hasAuthor ? `${article.author} · via ${article.source}` : `via ${article.source}`;
+
   return (
     <>
-      {/* Inject Structured Data */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -236,9 +250,9 @@ export default async function NewsArticlePage({ params }: PageProps) {
             </div>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="uppercase tracking-wider font-semibold text-[#141413] dark:text-[#f3f3f0]">
+              <Link href={`/category/${article.category}`} className="uppercase tracking-wider font-semibold text-[#141413] dark:text-[#f3f3f0] hover:underline">
                 {article.category}
-              </span>
+              </Link>
               <span>•</span>
               <span>{readingTimeMinutes} min read</span>
             </div>
@@ -246,10 +260,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
         </header>
 
         {/* Main Article Container */}
-        <main className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-16">
+        <main className="max-w-3xl mx-auto px-3 sm:px-6 py-6 sm:py-14">
           {/* Category Tag */}
           <div className="text-[11px] sm:text-xs uppercase tracking-widest font-semibold text-[#6b7280] dark:text-[#9ca3af] mb-2 sm:mb-3">
-            {article.category}
+            <Link href={`/category/${article.category}`} className="hover:underline">
+              {article.category}
+            </Link>
           </div>
 
           {/* Headline */}
@@ -263,16 +279,16 @@ export default async function NewsArticlePage({ params }: PageProps) {
           </p>
 
           {/* Byline & Metadata Box */}
-          <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-[#e8e8e6] dark:border-[#222220] mb-8 text-xs text-[#6b7280] dark:text-[#9ca3af]">
+          <div className="flex flex-wrap items-center justify-between gap-4 py-4 border-y border-[#e8e8e6] dark:border-[#222220] mb-6 text-xs text-[#6b7280] dark:text-[#9ca3af]">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-[#f4f4f2] dark:bg-[#1a1a18] flex items-center justify-center font-bold text-sm text-[#141413] dark:text-[#f3f3f0] border border-[#e8e8e6] dark:border-[#222220]">
-                {article.author.charAt(0)}
+                {article.source.charAt(0)}
               </div>
               <div>
                 <div className="font-semibold text-sm text-[#141413] dark:text-[#f3f3f0]">
-                  {article.author}
+                  {authorDisplay}
                 </div>
-                <div>{article.authorRole || `${article.source} Correspondent`}</div>
+                <div className="text-neutral-500">Curated & Verified Aggregation</div>
               </div>
             </div>
 
@@ -288,15 +304,53 @@ export default async function NewsArticlePage({ params }: PageProps) {
             </div>
           </div>
 
+          {/* MANDATORY PROMINENT SOURCE LINK ABOVE THE FOLD (Phase 3 Requirement 4 & 5) */}
+          <div className="mb-8 p-3.5 sm:p-4 rounded-lg bg-[#f8f8f6] dark:bg-[#161614] border border-[#e5e5e2] dark:border-[#262624] flex items-center justify-between gap-4">
+            <div className="text-xs sm:text-sm">
+              <span className="text-[#6b7280] dark:text-[#9ca3af]">Original reporting by </span>
+              <strong className="text-[#141413] dark:text-[#f3f3f0]">{article.source}</strong>
+            </div>
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener nofollow"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#141413] text-white dark:bg-[#f3f3f0] dark:text-[#141413] text-xs font-semibold hover:opacity-90 transition-opacity shrink-0"
+            >
+              <span>Read the full story at {article.source}</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+
+          {/* Multi-source coverage / Also covered by */}
+          {article.alsoCoveredBy && article.alsoCoveredBy.length > 0 && (
+            <div className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-6 p-3 rounded bg-[#f7f7f5] dark:bg-[#161614] border border-[#e8e8e6] dark:border-[#222220] flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-[#141413] dark:text-[#f3f3f0]">Also covered by:</span>
+              {article.alsoCoveredBy.map((cov, idx) => (
+                <span key={idx} className="inline-flex items-center gap-1">
+                  <a
+                    href={cov.url}
+                    target="_blank"
+                    rel="noopener nofollow"
+                    className="underline hover:text-[#141413] dark:hover:text-[#f3f3f0] transition-colors"
+                  >
+                    {cov.source}
+                  </a>
+                  <ExternalLink className="w-3 h-3 opacity-60" />
+                  {idx < article.alsoCoveredBy!.length - 1 && <span className="opacity-40">·</span>}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Client Audio Player Widget */}
           <ArticleAudioPlayer
             title={article.title}
             author={article.author}
-            summary={article.summary}
+            summary={article.aiSummary || article.summary}
             durationMinutes={readingTimeMinutes}
           />
 
-          {/* Interactive Action Bar (Applaud, Save, Share, Ask Research Desk) */}
+          {/* Interactive Action Bar */}
           <ArticleActions
             slug={article.slug}
             title={article.title}
@@ -304,8 +358,26 @@ export default async function NewsArticlePage({ params }: PageProps) {
             initialLikes={article.likes || 0}
           />
 
-          {/* Featured Image */}
-          {heroImage && (
+          {/* AI-Assisted Grounded Summary Block */}
+          {article.aiSummary && (
+            <div className="my-8 p-5 sm:p-6 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-bold mb-2">
+                <Sparkles className="w-4 h-4" />
+                <span>Summary (AI-assisted)</span>
+              </div>
+              <p className="text-sm sm:text-base text-[#374151] dark:text-[#d1d5db] leading-relaxed font-sans mb-3">
+                {article.aiSummary}
+              </p>
+              {article.whyItMatters && (
+                <div className="text-xs sm:text-sm text-[#4b5563] dark:text-[#9ca3af] pt-2 border-t border-amber-500/10">
+                  <span className="font-semibold text-[#141413] dark:text-[#f3f3f0]">Why it matters:</span> {article.whyItMatters}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Featured Image or Typographic Card */}
+          {heroImage ? (
             <figure className="my-8 overflow-hidden rounded-md bg-[#f4f4f2] dark:bg-[#1a1a18]">
               <img
                 src={heroImage}
@@ -313,12 +385,20 @@ export default async function NewsArticlePage({ params }: PageProps) {
                 className="w-full max-h-[500px] object-cover"
               />
               <figcaption className="text-right text-[11px] text-[#9ca3af] p-2">
-                Photo via {article.source} / Editorial Archive
+                Image: {article.source}
               </figcaption>
             </figure>
+          ) : (
+            <div className="my-8">
+              <TypographicCardFallback
+                category={article.category}
+                source={article.source}
+                title={article.title}
+              />
+            </div>
           )}
 
-          {/* Key Bullet Takeaways for Readers & LLMs */}
+          {/* Key Bullet Takeaways if authentic */}
           {keyPoints && keyPoints.length > 0 && (
             <div className="article-takeaways my-8 p-6 rounded-md bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#222220]">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-[#6b7280] dark:text-[#9ca3af] mb-3">
@@ -335,7 +415,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
             </div>
           )}
 
-          {/* Full Narrative Multi-Paragraph Body */}
+          {/* Article Excerpt Body */}
           <div className="article-body prose prose-neutral dark:prose-invert max-w-none font-serif text-lg sm:text-xl text-[#27272a] dark:text-[#e4e4e7] leading-relaxed space-y-6 my-8">
             {paragraphs.map((para, idx) => (
               <p key={idx} className="leading-relaxed">
@@ -344,10 +424,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
             ))}
           </div>
 
-          {/* Original Source Reference & LLM Markdown Link */}
+          {/* Bottom Attribution & External Source Link */}
           <div className="mt-12 pt-6 border-t border-[#e8e8e6] dark:border-[#222220] flex flex-wrap items-center justify-between gap-4 text-xs text-[#6b7280] dark:text-[#9ca3af]">
             <div className="flex items-center gap-3">
-              <span>Published on {article.source}</span>
+              <span>Reported via {article.source}</span>
               <span className="text-neutral-300 dark:text-neutral-700">•</span>
               <a
                 href={`/api/llm/${article.slug}`}
@@ -362,11 +442,10 @@ export default async function NewsArticlePage({ params }: PageProps) {
             <a
               href={article.url}
               target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-[#141413] dark:text-[#f3f3f0] underline underline-offset-4 hover:opacity-80"
+              rel="noopener nofollow"
+              className="inline-flex items-center gap-1.5 font-semibold text-[#141413] dark:text-[#f3f3f0] underline underline-offset-4 hover:opacity-80"
             >
-              <span>View Original Publication</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Read the full story at {article.source} ↗</span>
             </a>
           </div>
 
@@ -383,7 +462,7 @@ export default async function NewsArticlePage({ params }: PageProps) {
                     href={`/news/${rel.slug}`}
                     className="group block space-y-2"
                   >
-                    {rel.imageUrl && (
+                    {rel.imageUrl ? (
                       <div className="aspect-[16/10] overflow-hidden rounded bg-[#f4f4f2] dark:bg-[#1a1a18]">
                         <img
                           src={rel.imageUrl}
@@ -391,6 +470,12 @@ export default async function NewsArticlePage({ params }: PageProps) {
                           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-500"
                         />
                       </div>
+                    ) : (
+                      <TypographicCardFallback
+                        category={rel.category}
+                        source={rel.source}
+                        title={rel.title}
+                      />
                     )}
                     <span className="text-[10px] uppercase tracking-wider font-semibold text-[#6b7280] dark:text-[#9ca3af] block">
                       {rel.category}
@@ -405,7 +490,6 @@ export default async function NewsArticlePage({ params }: PageProps) {
           )}
         </main>
 
-        {/* Global Editorial & Legal Footer */}
         <EditorialFooter />
       </article>
     </>

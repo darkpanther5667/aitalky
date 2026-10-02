@@ -1,180 +1,142 @@
 import { Article, Category } from "@/types/news";
 import { getDbArticleBySlug, upsertArticle } from "@/lib/db";
-import { slugify } from "@/lib/rss-sources";
+import { cleanSlug, cleanHtmlAndBoilerplate } from "./text-cleaner";
+import { categorizeArticle } from "./categorizer";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const summaryCache = new Map<string, { aiSummary: string; whyItMatters: string }>();
 
-export interface EditorialGenerationResult {
-  title: string;
-  summary: string;
-  content: string;
-  keyPoints: string[];
-  category: Category;
-  tags: string[];
-  readingTimeMinutes: number;
+export interface GroundedSummaryResult {
+  aiSummary: string;
+  whyItMatters: string;
 }
 
 /**
- * Transforms raw news into an original, high-integrity aitalky editorial article using Gemini AI.
+ * Generates a grounded 2-3 sentence factual summary and 1-line "Why it matters".
+ * Strictly constrained to facts provided in the source text.
+ * Skips generation if source text is under 30 words.
  */
-export async function transformWithAi(raw: {
+export async function generateGroundedSummary(story: {
+  id?: string;
   title: string;
   summary: string;
   content?: string;
   source: string;
-  url: string;
-}): Promise<EditorialGenerationResult | null> {
-  const apiKey = process.env.GEMINI_API_KEY || GEMINI_API_KEY;
-
-  if (!apiKey) {
-    // If no Gemini AI key is present, fallback to smart structured synthesis
-    return fallbackEditorialSynthesizer(raw);
+}): Promise<GroundedSummaryResult | null> {
+  const cacheKey = story.id || story.title;
+  if (summaryCache.has(cacheKey)) {
+    return summaryCache.get(cacheKey)!;
   }
 
-  const prompt = `You are the Senior Editor of 'aitalky' (https://aitalky.vercel.app), a prestigious, calm, and intellectually rigorous publication dedicated purely to Artificial Intelligence.
+  const rawText = `${story.summary} ${story.content || ""}`.trim();
+  const cleanedText = cleanHtmlAndBoilerplate(rawText);
+  const wordCount = cleanedText.split(/\s+/).filter(Boolean).length;
 
-Your job is to rewrite this raw story into an original, publication-ready editorial piece.
+  // Grounding Rule: If source text is under 30 words, do not generate AI summary
+  if (wordCount < 30) {
+    return null;
+  }
 
-EDITORIAL GUIDELINES:
-1. Tone: Calm, thoughtful, deeply analytical, and human.
-2. Voice: High journalistic standards (like MIT Technology Review or Financial Times AI).
-3. Strictly forbidden: Do NOT use sensationalist tropes ("game changer", "revolutionary", "skyrocketing", "unleashes"), robotic clichés ("in a world of AI", "dive into"), or emojis.
-4. Focus: Emphasize practical implications, algorithmic details, compute economics, or regulatory impacts.
+  const prompt = `You are a rigorous, strictly factual editorial assistant for an AI news aggregator.
+Your task is to summarize the following news story using ONLY the facts explicitly provided in the source text below.
 
-RAW STORY INPUT:
-Title: ${raw.title}
-Source: ${raw.source}
-URL: ${raw.url}
-Details: ${raw.content || raw.summary}
+STRICT GROUNDING RULES:
+1. Do NOT invent, assume, or extrapolate any facts, quotes, statistics, job titles, or dates not explicitly stated in the source text.
+2. If a detail is not in the text, do not mention it.
+3. Write a concise 2 to 3 sentence summary of the news fact.
+4. Write exactly 1 sentence under "whyItMatters" describing the direct technical or industry significance explicitly supported by the text.
+5. Tone: Neutral, factual, and informative. No marketing hype ("game changer", "revolutionary").
 
-RESPONSE FORMAT:
-Respond with ONLY valid JSON (no markdown formatting, no code blocks):
+SOURCE TEXT:
+Headline: ${story.title}
+Source: ${story.source}
+Details: ${cleanedText.slice(0, 1500)}
+
+RESPONSE FORMAT (Respond with ONLY valid JSON, no markdown formatting):
 {
-  "title": "Compelling, clear editorial headline (max 85 chars)",
-  "summary": "Crisp 2-sentence executive standfirst summarizing the news fact and its broader consequence.",
-  "content": "Full narrative article body composed of 3 to 4 well-structured paragraphs separated by double newlines. Rich in context and factual clarity.",
-  "keyPoints": [
-    "High-density bullet point 1 (factual takeaway)",
-    "High-density bullet point 2 (architectural or business impact)",
-    "High-density bullet point 3 (industry or research context)"
-  ],
-  "category": "industry" | "research" | "products" | "policy" | "culture",
-  "tags": ["AI", "ModelName/Company", "SpecificTopic"],
-  "readingTimeMinutes": 3
+  "summary": "2 to 3 sentence strictly grounded summary.",
+  "whyItMatters": "1 sentence explaining practical significance."
 }`;
 
-  const candidateModels = [
-    "gemini-flash-lite-latest",
-    "gemini-3.5-flash-lite",
-    "gemini-2.5-flash",
-    "gemini-flash-latest",
-    "gemini-3.8-flash",
-  ];
-
-  for (const model of candidateModels) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  // 1. Try Anthropic API if key exists
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (anthropicKey) {
     try {
-      let res = await fetch(endpoint, {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "content-type": "application/json",
+        },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 1200,
-          },
+          model: "claude-3-5-haiku-20241022",
+          max_tokens: 300,
+          temperature: 0.2,
+          messages: [{ role: "user", content: prompt }],
         }),
       });
 
-      // Handle 429 (Rate Limit) or 503 (High Demand) with a quick backoff retry
-      if (res.status === 429 || res.status === 503) {
-        console.warn(`[AI Curator] Model ${model} returned ${res.status}. Waiting 1500ms before retry...`);
-        await new Promise((r) => setTimeout(r, 1500));
-        res = await fetch(endpoint, {
+      if (res.ok) {
+        const json = await res.json();
+        const responseText = json?.content?.[0]?.text || "";
+        const parsed = JSON.parse(responseText.replace(/```json\n?|\n?```/g, "").trim());
+        if (parsed.summary && parsed.whyItMatters) {
+          const result: GroundedSummaryResult = {
+            aiSummary: parsed.summary.trim(),
+            whyItMatters: parsed.whyItMatters.trim(),
+          };
+          summaryCache.set(cacheKey, result);
+          return result;
+        }
+      }
+    } catch (err) {
+      console.warn("[AI Curator] Anthropic request error, falling back to Gemini:", err);
+    }
+  }
+
+  // 2. Fallback to Gemini API
+  const geminiKey = process.env.GEMINI_API_KEY;
+  if (geminiKey) {
+    const candidateModels = ["gemini-flash-lite-latest", "gemini-2.5-flash", "gemini-flash-latest"];
+    for (const model of candidateModels) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+      try {
+        const res = await fetch(endpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.3,
-              maxOutputTokens: 1200,
+              temperature: 0.2,
+              maxOutputTokens: 350,
             },
           }),
         });
+
+        if (res.ok) {
+          const json = await res.json();
+          const rawOutput = json.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const parsed = JSON.parse(rawOutput.replace(/```json\n?|\n?```/g, "").trim());
+          if (parsed.summary && parsed.whyItMatters) {
+            const result: GroundedSummaryResult = {
+              aiSummary: parsed.summary.trim(),
+              whyItMatters: parsed.whyItMatters.trim(),
+            };
+            summaryCache.set(cacheKey, result);
+            return result;
+          }
+        }
+      } catch (err) {
+        // try next model
       }
-
-      if (!res.ok) {
-        console.warn(`[AI Curator] Model ${model} HTTP status ${res.status}, trying next model...`);
-        continue;
-      }
-
-      const data = await res.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) continue;
-
-      const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
-      const parsed = JSON.parse(cleanJson);
-
-      return {
-        title: parsed.title || raw.title,
-        summary: parsed.summary || raw.summary,
-        content: parsed.content || raw.content || raw.summary,
-        keyPoints: Array.isArray(parsed.keyPoints) ? parsed.keyPoints : [],
-        category: (parsed.category as Category) || "industry",
-        tags: Array.isArray(parsed.tags) ? parsed.tags : ["AI", raw.source],
-        readingTimeMinutes: parsed.readingTimeMinutes || 3,
-      };
-    } catch (err) {
-      console.warn(`[AI Curator] Error calling ${model}:`, err);
-      continue;
     }
   }
 
-  return fallbackEditorialSynthesizer(raw);
+  return null;
 }
 
 /**
- * Deterministic fallback synthesizer if AI API key is temporarily unavailable.
- */
-function fallbackEditorialSynthesizer(raw: {
-  title: string;
-  summary: string;
-  content?: string;
-  source: string;
-}): EditorialGenerationResult {
-  const text = raw.content || raw.summary;
-  const sentences = text.split(/(?<=[.?!])\s+/).filter((s) => s.length > 20);
-
-  const keyPoints: string[] = [];
-  if (sentences.length >= 3) {
-    keyPoints.push(sentences[0]);
-    keyPoints.push(sentences[1]);
-    keyPoints.push(`Primary reporting and verification verified by ${raw.source}.`);
-  } else {
-    keyPoints.push(raw.summary);
-    keyPoints.push(`Continuous tracking provided via ${raw.source} intelligence feeds.`);
-  }
-
-  let category: Category = "industry";
-  const lower = (raw.title + " " + raw.summary).toLowerCase();
-  if (lower.includes("paper") || lower.includes("arxiv") || lower.includes("research")) category = "research";
-  else if (lower.includes("policy") || lower.includes("law") || lower.includes("court") || lower.includes("act")) category = "policy";
-  else if (lower.includes("release") || lower.includes("tool") || lower.includes("app") || lower.includes("weights")) category = "products";
-  else if (lower.includes("human") || lower.includes("artist") || lower.includes("work") || lower.includes("ethic")) category = "culture";
-
-  return {
-    title: raw.title,
-    summary: raw.summary,
-    content: raw.content || raw.summary,
-    keyPoints,
-    category,
-    tags: ["AI", raw.source, category],
-    readingTimeMinutes: Math.max(2, Math.ceil(text.split(" ").length / 160)),
-  };
-}
-
-/**
- * Autonomously curates, rewrites, and publishes a new story to Supabase.
+ * Enriches and saves an article with grounded AI summary if needed.
  */
 export async function curateAndPublishStory(rawStory: {
   title: string;
@@ -186,41 +148,50 @@ export async function curateAndPublishStory(rawStory: {
   publishedAt?: string;
   imageUrl?: string;
 }): Promise<Article | null> {
-  const slug = slugify(rawStory.title);
+  const cleanTitle = cleanHtmlAndBoilerplate(rawStory.title);
+  const slug = cleanSlug(cleanTitle);
   if (!slug) return null;
 
-  // Check if already in Supabase with complete AI synthesis
   const existing = await getDbArticleBySlug(slug);
-  if (existing && existing.keyPoints && existing.keyPoints.length >= 2 && existing.content && existing.content.length > 300) {
+  if (existing && existing.aiSummary) {
     return existing;
   }
 
-  // Transform using AI
-  const transformed = await transformWithAi(rawStory);
-  if (!transformed) return null;
+  const category = categorizeArticle({
+    title: cleanTitle,
+    summary: rawStory.summary,
+    source: rawStory.source,
+  });
+
+  const grounded = await generateGroundedSummary({
+    id: existing?.id,
+    title: cleanTitle,
+    summary: rawStory.summary,
+    content: rawStory.content,
+    source: rawStory.source,
+  });
 
   const article: Article = {
-    id: `ai-${Date.now().toString(36)}-${slug.slice(0, 16)}`,
+    id: existing?.id || `story-${Date.now().toString(36)}-${slug.slice(0, 16)}`,
     slug,
-    title: transformed.title,
-    summary: transformed.summary,
-    content: transformed.content,
+    title: cleanTitle,
+    summary: existing?.summary || cleanHtmlAndBoilerplate(rawStory.summary),
+    content: existing?.content || cleanHtmlAndBoilerplate(rawStory.content || rawStory.summary),
     source: rawStory.source,
     sourceUrl: rawStory.sourceUrl || "https://aitalky.vercel.app",
     url: rawStory.url,
-    publishedAt: rawStory.publishedAt || new Date().toISOString(),
-    category: transformed.category,
-    readingTimeMinutes: transformed.readingTimeMinutes,
-    author: `${rawStory.source} Desk / aitalky AI Review`,
-    authorRole: "Editorial Intelligence",
-    imageUrl:
-      rawStory.imageUrl ||
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    tags: transformed.tags,
-    keyPoints: transformed.keyPoints,
+    publishedAt: rawStory.publishedAt || existing?.publishedAt || new Date().toISOString(),
+    category,
+    readingTimeMinutes: Math.max(2, Math.ceil((rawStory.content || rawStory.summary).split(" ").length / 160)),
+    author: existing?.author || `${rawStory.source} Staff`,
+    imageUrl: rawStory.imageUrl || existing?.imageUrl || undefined,
+    tags: ["AI", rawStory.source, category],
+    keyPoints: existing?.keyPoints || [],
+    aiSummary: grounded?.aiSummary || existing?.aiSummary,
+    whyItMatters: grounded?.whyItMatters || existing?.whyItMatters,
+    isAiSummary: Boolean(grounded?.aiSummary || existing?.aiSummary),
   };
 
-  // Upsert to Supabase
   await upsertArticle(article);
   return article;
 }

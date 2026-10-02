@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Article } from "@/types/news";
-import { X, Volume2, Bookmark, Share2, Check, ExternalLink, ArrowRight, MessageCircle } from "lucide-react";
+import { X, Volume2, Bookmark, Share2, Check, ExternalLink, ArrowRight, Sparkles } from "lucide-react";
 import { speechManager } from "@/lib/speech";
+import { TypographicCardFallback } from "./TypographicCardFallback";
 
 interface StoryReaderModalProps {
   article: Article | null;
@@ -28,14 +29,15 @@ export function StoryReaderModal({
 
   const handleListen = () => {
     if (!speechManager) return;
-    const text = `${article.title}. Written by ${article.author}. ${article.summary}. ${article.content || ""}`;
+    const textToRead = article.aiSummary || article.summary;
+    const text = `${article.title}. Published via ${article.source}. ${textToRead}`;
     speechManager.speak(text);
   };
 
   const handleShare = async () => {
     try {
       if (navigator.clipboard) {
-        await navigator.clipboard.writeText(`${article.title} - https://aitalky.news/news/${article.slug}`);
+        await navigator.clipboard.writeText(`${article.title} - https://aitalky.vercel.app/news/${article.slug}`);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
@@ -63,7 +65,7 @@ export function StoryReaderModal({
         }),
       });
       const data = await res.json();
-      setAnswers((prev) => [...prev, { q, a: data.reply || "Thank you for asking. Our editorial system has processed your question." }]);
+      setAnswers((prev) => [...prev, { q, a: data.reply || "Thank you for asking. Our editorial assistant has processed your question." }]);
     } catch {
       setAnswers((prev) => [...prev, { q, a: "Unable to process the query right now. Please try again." }]);
     } finally {
@@ -75,8 +77,11 @@ export function StoryReaderModal({
     .split("\n\n")
     .filter((p) => p.trim().length > 0);
 
+  const hasAuthor = article.author && article.author !== article.source && !article.author.toLowerCase().includes("staff");
+  const authorDisplay = hasAuthor ? `${article.author} · via ${article.source}` : `via ${article.source}`;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
       <div className="bg-[var(--background)] border border-[#e8e8e6] dark:border-[#222220] w-full max-w-3xl max-h-[92vh] flex flex-col rounded-lg shadow-2xl overflow-hidden">
         {/* Top Control Bar */}
         <div className="flex items-center justify-between border-b border-[#e8e8e6] dark:border-[#222220] px-6 py-3 text-xs text-[#6b7280] dark:text-[#9ca3af]">
@@ -133,20 +138,17 @@ export function StoryReaderModal({
         </div>
 
         {/* Scrollable Article Body */}
-        <div className="overflow-y-auto p-6 sm:p-10 space-y-8">
+        <div className="overflow-y-auto p-6 sm:p-10 space-y-6">
           {/* Article Header */}
-          <div className="max-w-2xl mx-auto space-y-4">
+          <div className="max-w-2xl mx-auto space-y-3">
             <h1 className="text-2xl sm:text-4xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] leading-tight">
               {article.title}
             </h1>
 
             <div className="flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af] pt-2 border-t border-[#f0f0ee] dark:border-[#1a1a18]">
-              <div>
-                <span className="font-semibold text-[#141413] dark:text-[#f3f3f0]">
-                  By {article.author}
-                </span>
-                {article.authorRole && <span>, {article.authorRole}</span>}
-              </div>
+              <span className="font-semibold text-[#141413] dark:text-[#f3f3f0]">
+                {authorDisplay}
+              </span>
               <span>
                 {new Date(article.publishedAt).toLocaleDateString("en-US", {
                   month: "short",
@@ -157,26 +159,63 @@ export function StoryReaderModal({
             </div>
           </div>
 
-          {/* Featured Image */}
-          {article.imageUrl && (
-            <div className="max-w-2xl mx-auto overflow-hidden rounded-md">
+          {/* Prominent Original Source Action Link */}
+          <div className="max-w-2xl mx-auto p-3 rounded-lg bg-[#f4f4f2] dark:bg-[#161614] border border-[#e8e8e6] dark:border-[#262624] flex items-center justify-between text-xs">
+            <span className="text-[#6b7280] dark:text-[#9ca3af]">Original report via <strong>{article.source}</strong></span>
+            <a
+              href={article.url}
+              target="_blank"
+              rel="noopener nofollow"
+              className="inline-flex items-center gap-1 font-semibold text-black dark:text-white underline hover:opacity-80"
+            >
+              <span>Read the full story at {article.source}</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+
+          {/* Featured Image or Typographic Fallback */}
+          <div className="max-w-2xl mx-auto overflow-hidden rounded-md">
+            {article.imageUrl ? (
               <img
                 src={article.imageUrl}
                 alt={article.title}
                 className="w-full max-h-96 object-cover"
               />
+            ) : (
+              <TypographicCardFallback
+                category={article.category}
+                source={article.source}
+                title={article.title}
+              />
+            )}
+          </div>
+
+          {/* Grounded AI Summary */}
+          {article.aiSummary ? (
+            <div className="max-w-2xl mx-auto p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+              <div className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 font-bold mb-1.5">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Summary (AI-assisted)</span>
+              </div>
+              <p className="text-sm font-sans text-[#374151] dark:text-[#d1d5db] leading-relaxed">
+                {article.aiSummary}
+              </p>
+              {article.whyItMatters && (
+                <p className="mt-2 text-xs text-[#6b7280] dark:text-[#9ca3af] italic">
+                  <span className="font-semibold not-italic text-[#141413] dark:text-[#f3f3f0]">Why it matters:</span> {article.whyItMatters}
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="max-w-2xl mx-auto">
+              <p className="text-base sm:text-lg font-serif italic text-[#4b5563] dark:text-[#9ca3af] leading-relaxed border-l-2 border-[#141413] dark:border-[#f3f3f0] pl-4 my-2">
+                &ldquo;{article.summary}&rdquo;
+              </p>
             </div>
           )}
 
-          {/* Lead Summary */}
-          <div className="max-w-2xl mx-auto">
-            <p className="text-base sm:text-lg font-serif italic text-[#4b5563] dark:text-[#9ca3af] leading-relaxed border-l-2 border-[#141413] dark:border-[#f3f3f0] pl-4 my-4">
-              "{article.summary}"
-            </p>
-          </div>
-
-          {/* Full Narrative Text Paragraphs */}
-          <div className="max-w-2xl mx-auto space-y-5 font-serif text-base sm:text-lg text-[#27272a] dark:text-[#e4e4e7] leading-relaxed">
+          {/* Article Excerpt Body */}
+          <div className="max-w-2xl mx-auto space-y-4 font-serif text-base sm:text-lg text-[#27272a] dark:text-[#e4e4e7] leading-relaxed">
             {paragraphs.map((p, idx) => (
               <p key={idx} className="leading-relaxed">
                 {p}
@@ -201,58 +240,31 @@ export function StoryReaderModal({
             </div>
           )}
 
-          {/* Dedicated Page Link Banner */}
-          <div className="max-w-2xl mx-auto p-4 rounded-md bg-[#f4f4f2]/70 dark:bg-[#1a1a18]/70 border border-[#e8e8e6] dark:border-[#222220] flex items-center justify-between text-xs font-sans">
-            <div>
-              <span className="font-semibold text-black dark:text-white block">
-                Reading in Quick Drawer
-              </span>
-              <span className="text-[#6b7280] dark:text-[#9ca3af]">
-                Visit the permanent canonical story page for the full reading experience.
-              </span>
-            </div>
-            <Link
-              href={`/news/${article.slug}`}
-              className="px-3 py-1.5 bg-[#141413] text-white dark:bg-[#f3f3f0] dark:text-[#141413] font-medium rounded text-xs flex items-center gap-1 shrink-0 hover:opacity-90 transition-opacity"
-            >
-              <span>Open Page</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {/* Source Link */}
-          <div className="max-w-2xl mx-auto pt-2 font-sans flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af]">
-            <span>Published by {article.source}</span>
+          {/* External Source Link Footer */}
+          <div className="max-w-2xl mx-auto pt-6 border-t border-[#e8e8e6] dark:border-[#222220] flex items-center justify-between text-xs text-[#6b7280] dark:text-[#9ca3af]">
+            <span>Reported via {article.source}</span>
             <a
               href={article.url}
               target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 font-medium text-[#141413] dark:text-[#f3f3f0] underline underline-offset-4 hover:opacity-80 transition-opacity"
+              rel="noopener nofollow"
+              className="inline-flex items-center gap-1.5 font-semibold text-[#141413] dark:text-[#f3f3f0] underline underline-offset-4 hover:opacity-80"
             >
-              <span>View Source Publication</span>
-              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Read the full story at {article.source} ↗</span>
             </a>
           </div>
 
-          {/* Reader Discussion / Q&A Box */}
-          <div className="max-w-2xl mx-auto pt-6 border-t border-[#e8e8e6] dark:border-[#222220] font-sans">
-            <div className="flex items-center gap-2 mb-2 text-sm font-serif font-bold text-[#141413] dark:text-[#f3f3f0]">
-              <MessageCircle className="w-4 h-4" />
-              <span>Questions &amp; Analysis</span>
-            </div>
-            <p className="text-xs text-[#6b7280] dark:text-[#9ca3af] mb-4">
-              Have a question about what this means for you or your team? Ask here for an editorial synthesis.
-            </p>
+          {/* Research Desk Interactive Section */}
+          <div className="max-w-2xl mx-auto mt-8 pt-6 border-t border-[#e8e8e6] dark:border-[#222220]">
+            <h4 className="font-serif font-bold text-sm text-[#141413] dark:text-[#f3f3f0] mb-2">
+              Ask Research Desk about this story
+            </h4>
 
-            {/* Q&A Thread */}
             {answers.length > 0 && (
               <div className="space-y-3 mb-4">
                 {answers.map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-md bg-[#f4f4f2] dark:bg-[#1a1a18] text-xs space-y-1.5 border border-[#e8e8e6] dark:border-[#222220]">
-                    <div className="font-semibold text-black dark:text-white">Q: {item.q}</div>
-                    <div className="text-[#4b5563] dark:text-[#9ca3af] leading-relaxed whitespace-pre-line">
-                      {item.a}
-                    </div>
+                  <div key={idx} className="p-3.5 rounded bg-[#f4f4f2] dark:bg-[#1a1a18] text-xs space-y-1.5">
+                    <p className="font-semibold text-black dark:text-white">&ldquo;{item.q}&rdquo;</p>
+                    <p className="text-[#4b5563] dark:text-[#9ca3af] leading-relaxed">{item.a}</p>
                   </div>
                 ))}
               </div>
@@ -263,13 +275,13 @@ export function StoryReaderModal({
                 type="text"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
-                placeholder="e.g. How does this compare to earlier architectures?"
+                placeholder="Ask about architectural impact, compute overhead, or background..."
                 className="flex-1 bg-[#f4f4f2] dark:bg-[#1a1a18] border border-[#e8e8e6] dark:border-[#222220] rounded-md px-3 py-2 text-xs text-[#141413] dark:text-[#f3f3f0] placeholder:text-[#9ca3af] focus:outline-none focus:border-black dark:focus:border-white transition-colors"
               />
               <button
                 type="submit"
-                disabled={loadingAnswer || !question.trim()}
-                className="px-4 py-2 bg-[#141413] text-white dark:bg-[#f3f3f0] dark:text-[#141413] text-xs font-medium rounded-md hover:opacity-90 disabled:opacity-50 transition-opacity cursor-pointer"
+                disabled={loadingAnswer}
+                className="px-4 py-2 rounded-md bg-[#141413] dark:bg-[#f3f3f0] text-white dark:text-[#141413] text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50"
               >
                 {loadingAnswer ? "Analyzing..." : "Ask"}
               </button>

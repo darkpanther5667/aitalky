@@ -4,7 +4,7 @@ import { fetchLiveNews } from "@/lib/rss-sources";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://aitalky.vercel.app";
-  let articles = await getDbArticles(undefined, 200);
+  let articles = await getDbArticles(undefined, 250);
 
   if (!articles || articles.length === 0) {
     try {
@@ -19,12 +19,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
+  const categoryEntries: MetadataRoute.Sitemap = [
+    "industry",
+    "research",
+    "products",
+    "culture",
+    "policy",
+  ].map((cat) => ({
+    url: `${baseUrl}/category/${cat}`,
+    lastModified: new Date(),
+    changeFrequency: "hourly",
+    priority: 0.85,
+  }));
+
   const staticEntries: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
       changeFrequency: "hourly",
       priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/brief`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
     },
     {
       url: `${baseUrl}/about`,
@@ -58,5 +77,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  return [...staticEntries, ...articleEntries];
+  return [...staticEntries, ...categoryEntries, ...articleEntries];
 }

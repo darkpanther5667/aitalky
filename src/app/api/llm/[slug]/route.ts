@@ -26,9 +26,9 @@ export async function GET(
   let fullBody = article.content || article.summary;
   let keyPoints = article.keyPoints || [];
 
-  if (!article.content || article.content.split("\n\n").length < 3) {
+  if (!article.content || article.content.split("\n\n").length < 2) {
     try {
-      const scraped = await scrapeFullArticle(article.url, article.title, article.summary, article.category);
+      const scraped = await scrapeFullArticle(article.url, article.title, article.summary);
       if (scraped.content) fullBody = scraped.content;
       if (scraped.keyPoints && scraped.keyPoints.length > 0) keyPoints = scraped.keyPoints;
     } catch {}

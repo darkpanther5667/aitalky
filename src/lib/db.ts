@@ -24,6 +24,13 @@ export function getDbPool(): Pool {
 }
 
 function mapRowToArticle(data: any): Article {
+  let alsoCoveredBy = [];
+  if (Array.isArray(data.also_covered_by)) {
+    alsoCoveredBy = data.also_covered_by;
+  } else if (typeof data.also_covered_by === "string") {
+    try { alsoCoveredBy = JSON.parse(data.also_covered_by); } catch {}
+  }
+
   return {
     id: data.id,
     slug: data.slug,
@@ -38,14 +45,43 @@ function mapRowToArticle(data: any): Article {
     readingTimeMinutes: data.reading_time_minutes || data.readingTimeMinutes || 3,
     author: data.author,
     authorRole: data.author_role || data.authorRole,
-    imageUrl: data.image_url || data.imageUrl,
+    imageUrl: data.image_url || data.imageUrl || undefined,
     tags: Array.isArray(data.tags) ? data.tags : [],
     keyPoints: Array.isArray(data.key_points || data.keyPoints)
       ? data.key_points || data.keyPoints
       : [],
     views: data.views || 0,
     likes: data.likes || 0,
+    alsoCoveredBy,
+    aiSummary: data.ai_summary || undefined,
+    whyItMatters: data.why_it_matters || undefined,
+    isAiSummary: Boolean(data.is_ai_summary),
   };
+}
+
+export async function getSlugRedirect(slug: string): Promise<string | null> {
+  try {
+    const client = getSupabaseAdmin() || supabase;
+    const { data } = await client
+      .from("slug_redirects")
+      .select("new_slug")
+      .eq("old_slug", slug)
+      .maybeSingle();
+
+    if (data?.new_slug) {
+      return data.new_slug;
+    }
+  } catch {}
+
+  try {
+    const p = getDbPool();
+    const res = await p.query(`SELECT new_slug FROM slug_redirects WHERE old_slug = $1 LIMIT 1`, [slug]);
+    if (res.rows.length > 0) {
+      return res.rows[0].new_slug;
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function getDbArticleBySlug(slug: string): Promise<Article | null> {
@@ -158,9 +194,13 @@ export async function upsertArticle(article: Article): Promise<void> {
       reading_time_minutes: article.readingTimeMinutes || 3,
       author: article.author,
       author_role: article.authorRole,
-      image_url: article.imageUrl,
+      image_url: article.imageUrl || null,
       tags: article.tags || [],
       key_points: article.keyPoints || [],
+      also_covered_by: JSON.stringify(article.alsoCoveredBy || []),
+      ai_summary: article.aiSummary || null,
+      why_it_matters: article.whyItMatters || null,
+      is_ai_summary: Boolean(article.isAiSummary),
       updated_at: new Date().toISOString(),
     };
 
@@ -180,9 +220,9 @@ export async function upsertArticle(article: Article): Promise<void> {
       INSERT INTO articles (
         id, slug, title, summary, content, source, source_url, url,
         published_at, category, reading_time_minutes, author, author_role,
-        image_url, tags, key_points, updated_at
+        image_url, tags, key_points, also_covered_by, ai_summary, why_it_matters, is_ai_summary, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW()
       )
       ON CONFLICT (slug) DO UPDATE SET
         title = EXCLUDED.title,
@@ -192,6 +232,10 @@ export async function upsertArticle(article: Article): Promise<void> {
         source_url = EXCLUDED.source_url,
         image_url = COALESCE(EXCLUDED.image_url, articles.image_url),
         key_points = CASE WHEN cardinality(EXCLUDED.key_points) > 0 THEN EXCLUDED.key_points ELSE articles.key_points END,
+        also_covered_by = EXCLUDED.also_covered_by,
+        ai_summary = COALESCE(EXCLUDED.ai_summary, articles.ai_summary),
+        why_it_matters = COALESCE(EXCLUDED.why_it_matters, articles.why_it_matters),
+        is_ai_summary = EXCLUDED.is_ai_summary,
         updated_at = NOW();
     `;
 
@@ -209,9 +253,13 @@ export async function upsertArticle(article: Article): Promise<void> {
       article.readingTimeMinutes || 3,
       article.author,
       article.authorRole,
-      article.imageUrl,
+      article.imageUrl || null,
       article.tags || [],
       article.keyPoints || [],
+      JSON.stringify(article.alsoCoveredBy || []),
+      article.aiSummary || null,
+      article.whyItMatters || null,
+      Boolean(article.isAiSummary),
     ]);
   } catch (pgErr) {
     console.error(`PG upsert error for ${article.slug}:`, pgErr);
@@ -238,9 +286,13 @@ export async function upsertArticles(articles: Article[]): Promise<void> {
       reading_time_minutes: article.readingTimeMinutes || 3,
       author: article.author,
       author_role: article.authorRole,
-      image_url: article.imageUrl,
+      image_url: article.imageUrl || null,
       tags: article.tags || [],
       key_points: article.keyPoints || [],
+      also_covered_by: JSON.stringify(article.alsoCoveredBy || []),
+      ai_summary: article.aiSummary || null,
+      why_it_matters: article.whyItMatters || null,
+      is_ai_summary: Boolean(article.isAiSummary),
       updated_at: new Date().toISOString(),
     }));
 
