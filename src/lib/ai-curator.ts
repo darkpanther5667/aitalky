@@ -63,15 +63,18 @@ Respond with ONLY valid JSON (no markdown formatting, no code blocks):
   "readingTimeMinutes": 3
 }`;
 
-  const endpoints = [
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`,
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+  const candidateModels = [
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-flash-latest",
+    "gemini-3.8-flash",
   ];
 
-  for (const endpoint of endpoints) {
+  for (const model of candidateModels) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
     try {
-      const res = await fetch(endpoint, {
+      let res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,7 +86,27 @@ Respond with ONLY valid JSON (no markdown formatting, no code blocks):
         }),
       });
 
-      if (!res.ok) continue;
+      // Handle 429 (Rate Limit) or 503 (High Demand) with a quick backoff retry
+      if (res.status === 429 || res.status === 503) {
+        console.warn(`[AI Curator] Model ${model} returned ${res.status}. Waiting 1500ms before retry...`);
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 1200,
+            },
+          }),
+        });
+      }
+
+      if (!res.ok) {
+        console.warn(`[AI Curator] Model ${model} HTTP status ${res.status}, trying next model...`);
+        continue;
+      }
 
       const data = await res.json();
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -101,7 +124,8 @@ Respond with ONLY valid JSON (no markdown formatting, no code blocks):
         tags: Array.isArray(parsed.tags) ? parsed.tags : ["AI", raw.source],
         readingTimeMinutes: parsed.readingTimeMinutes || 3,
       };
-    } catch {
+    } catch (err) {
+      console.warn(`[AI Curator] Error calling ${model}:`, err);
       continue;
     }
   }
@@ -165,9 +189,9 @@ export async function curateAndPublishStory(rawStory: {
   const slug = slugify(rawStory.title);
   if (!slug) return null;
 
-  // Check if already in Supabase
+  // Check if already in Supabase with complete AI synthesis
   const existing = await getDbArticleBySlug(slug);
-  if (existing && existing.content && existing.content.length > 200) {
+  if (existing && existing.keyPoints && existing.keyPoints.length >= 2 && existing.content && existing.content.length > 300) {
     return existing;
   }
 

@@ -50,11 +50,20 @@ async function handleSync(request: NextRequest) {
     const articles = await fetchLiveNews();
     console.log(`[Cron 30m AI Editor] Fetched ${articles.length} AI items from feeds`);
 
-    // 2. Run AI Senior Editor in parallel on top newest stories to synthesize executive takeaways and high-integrity prose
-    const topStories = articles.slice(0, 2);
-    const aiResults = await Promise.allSettled(
-      topStories.map((art) =>
-        curateAndPublishStory({
+    // 2. First, batch persist all raw articles to Supabase
+    if (articles.length > 0) {
+      await upsertArticles(articles);
+      console.log(`[Cron 30m AI Editor] Synced ${articles.length} raw articles to Supabase database`);
+    }
+
+    // 3. Then, run AI Senior Editor sequentially on top newest stories to enrich them with executive synthesis
+    // Running sequentially with a gentle delay prevents hitting 429 burst rate limits on Gemini
+    const topStories = articles.slice(0, 3);
+    const aiProcessedTitles: string[] = [];
+
+    for (const art of topStories) {
+      try {
+        const enriched = await curateAndPublishStory({
           title: art.title,
           summary: art.summary,
           content: art.content,
@@ -63,21 +72,17 @@ async function handleSync(request: NextRequest) {
           url: art.url,
           publishedAt: art.publishedAt,
           imageUrl: art.imageUrl,
-        })
-      )
-    );
+        });
 
-    const aiProcessedTitles: string[] = [];
-    aiResults.forEach((res) => {
-      if (res.status === "fulfilled" && res.value) {
-        aiProcessedTitles.push(res.value.title);
+        if (enriched) {
+          aiProcessedTitles.push(enriched.title);
+        }
+
+        // Pacing delay to adhere to Gemini free tier rate limits (15 RPM)
+        await new Promise((r) => setTimeout(r, 1200));
+      } catch (err) {
+        console.warn(`[Cron 30m AI Editor] Story enrichment error for "${art.title}":`, err);
       }
-    });
-
-    // 3. Batch persist all articles to Supabase
-    if (articles.length > 0) {
-      await upsertArticles(articles);
-      console.log(`[Cron 30m AI Editor] Synced ${articles.length} articles to Supabase database`);
     }
 
     // 4. Revalidate cache

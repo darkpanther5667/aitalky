@@ -18,10 +18,24 @@ const FEED_SOURCES: FeedSource[] = [
     type: "rss",
   },
   {
-    name: "Ars Technica AI",
-    url: "https://arstechnica.com/tag/ai/feed/",
-    defaultCategory: "industry",
-    homepage: "https://arstechnica.com",
+    name: "Hugging Face",
+    url: "https://huggingface.co/blog/feed.xml",
+    defaultCategory: "products",
+    homepage: "https://huggingface.co",
+    type: "rss",
+  },
+  {
+    name: "Google DeepMind",
+    url: "https://deepmind.google/blog/rss.xml",
+    defaultCategory: "research",
+    homepage: "https://deepmind.google",
+    type: "rss",
+  },
+  {
+    name: "OpenAI News",
+    url: "https://openai.com/news/rss.xml",
+    defaultCategory: "products",
+    homepage: "https://openai.com",
     type: "rss",
   },
   {
@@ -39,6 +53,41 @@ const FEED_SOURCES: FeedSource[] = [
     type: "rss",
   },
   {
+    name: "AWS ML Blog",
+    url: "https://aws.amazon.com/blogs/machine-learning/feed/",
+    defaultCategory: "industry",
+    homepage: "https://aws.amazon.com",
+    type: "rss",
+  },
+  {
+    name: "NVIDIA Blog",
+    url: "https://blogs.nvidia.com/feed/",
+    defaultCategory: "industry",
+    homepage: "https://blogs.nvidia.com",
+    type: "rss",
+  },
+  {
+    name: "InfoQ AI/ML",
+    url: "https://feed.infoq.com/ai-ml-data-eng/news",
+    defaultCategory: "industry",
+    homepage: "https://www.infoq.com",
+    type: "rss",
+  },
+  {
+    name: "The Register AI",
+    url: "https://www.theregister.com/software/ai_ml/headlines.atom",
+    defaultCategory: "policy",
+    homepage: "https://www.theregister.com",
+    type: "rss",
+  },
+  {
+    name: "Ars Technica AI",
+    url: "https://arstechnica.com/tag/ai/feed/",
+    defaultCategory: "industry",
+    homepage: "https://arstechnica.com",
+    type: "rss",
+  },
+  {
     name: "Wired AI",
     url: "https://www.wired.com/feed/tag/ai/latest/rss",
     defaultCategory: "culture",
@@ -53,13 +102,6 @@ const FEED_SOURCES: FeedSource[] = [
     type: "rss",
   },
   {
-    name: "Hugging Face",
-    url: "https://huggingface.co/blog/feed.xml",
-    defaultCategory: "products",
-    homepage: "https://huggingface.co",
-    type: "rss",
-  },
-  {
     name: "MIT Technology Review",
     url: "https://www.technologyreview.com/topic/artificial-intelligence/feed/",
     defaultCategory: "research",
@@ -68,7 +110,7 @@ const FEED_SOURCES: FeedSource[] = [
   },
   {
     name: "arXiv AI Research",
-    url: "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=8",
+    url: "http://export.arxiv.org/api/query?search_query=cat:cs.AI+OR+cat:cs.LG&sortBy=submittedDate&sortOrder=descending&max_results=10",
     defaultCategory: "research",
     homepage: "https://arxiv.org",
     type: "arxiv",
@@ -85,7 +127,7 @@ export function slugify(text: string): string {
     .slice(0, 85);
 }
 
-export function isAiRelevant(title: string, summary: string): boolean {
+export function isAiRelevant(title: string, summary: string, sourceName?: string): boolean {
   const text = `${title} ${summary}`.toLowerCase();
 
   // Instant disqualification for non-AI consumer gadgets, video games, deals, retail offers
@@ -102,16 +144,28 @@ export function isAiRelevant(title: string, summary: string): boolean {
     return false;
   }
 
-  // Mandatory match for authentic artificial intelligence & machine learning domains
+  // Pure AI-dedicated research desks are intrinsically relevant unless flagged by consumer reject phrases
+  const dedicatedAiDesks = [
+    "Hugging Face", "arXiv AI Research", "MarkTechPost", "Google DeepMind",
+    "OpenAI News", "AWS ML Blog", "NVIDIA Blog", "MIT Technology Review",
+    "SiliconANGLE AI", "TechCrunch AI", "Ars Technica AI", "The Verge AI",
+    "Wired AI", "InfoQ AI/ML", "The Register AI"
+  ];
+
+  if (sourceName && dedicatedAiDesks.includes(sourceName)) {
+    return true;
+  }
+
+  // Mandatory match for authentic artificial intelligence & machine learning domains (including plurals)
   const aiKeywords = [
     "ai", "artificial intelligence", "machine learning", "deep learning", "neural",
-    "llm", "large language model", "gpt", "claude", "deepseek", "gemini", "llama",
-    "openai", "anthropic", "mistral", "hugging face", "qwen", "transformer", "reasoning",
-    "agent", "agentic", "diffusion", "vision-language", "vla", "compute", "gpu",
-    "nvidia", "semiconductor", "robotics", "reinforcement learning", "superintelligence",
-    "agi", "deepmind", "groq", "cohere", "alignment", "safety",
+    "llm", "llms", "large language model", "large language models", "gpt", "claude", "deepseek", "gemini", "llama",
+    "openai", "anthropic", "mistral", "hugging face", "qwen", "transformer", "transformers", "reasoning",
+    "agent", "agents", "agentic", "diffusion", "vision-language", "vla", "compute", "gpu", "gpus",
+    "nvidia", "semiconductor", "semiconductors", "chip", "chips", "robotics", "robot", "robots",
+    "reinforcement learning", "superintelligence", "agi", "deepmind", "groq", "cohere", "alignment", "safety",
     "arxiv", "synthetic data", "inference", "quantization", "fine-tuning", "parameters",
-    "generative ai", "genai", "prompt", "token", "multimodal", "codex", "benchmark"
+    "generative ai", "genai", "prompt", "prompts", "token", "tokens", "multimodal", "codex", "benchmark", "benchmarks"
   ];
 
   return aiKeywords.some((kw) => {
@@ -199,7 +253,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
   const fetchPromises = FEED_SOURCES.map(async (source, sourceIdx) => {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
+      const timeout = setTimeout(() => controller.abort(), 6500);
 
       const res = await fetch(source.url, {
         signal: controller.signal,
@@ -224,13 +278,13 @@ export async function fetchLiveNews(): Promise<Article[]> {
             : [parsed.feed.entry]
           : [];
 
-        return entries.slice(0, 6).map((entry: any, i: number) => {
-          const rawTitle = typeof entry.title === "string" ? entry.title : entry.title?.["#text"] || "";
+        return entries.slice(0, 8).map((entry: any, i: number) => {
+          const rawTitle = typeof entry.title === "string" ? entry.title : entry.title?.["#text"] || entry.title?.["@_text"] || "";
           const cleanTitle = cleanHtml(rawTitle).replace(/^\[.*?\]\s*/, "");
           const rawSummary = entry.summary || "";
           const cleanSummary = cleanHtml(typeof rawSummary === "string" ? rawSummary : rawSummary?.["#text"] || "");
 
-          if (!isAiRelevant(cleanTitle, cleanSummary)) {
+          if (!isAiRelevant(cleanTitle, cleanSummary, source.name)) {
             return null;
           }
 
@@ -241,9 +295,15 @@ export async function fetchLiveNews(): Promise<Article[]> {
             authorName = entry.author.name;
           }
 
-          const link = Array.isArray(entry.link)
-            ? entry.link[0]?.["@_href"] || entry.id
-            : entry.link?.["@_href"] || entry.id;
+          let link = entry.link;
+          if (Array.isArray(link)) {
+            const alt = link.find((l: any) => l["@_rel"] === "alternate" || !l["@_rel"]);
+            link = alt?.["@_href"] || link[0]?.["@_href"] || entry.id;
+          } else if (typeof link === "object" && link?.["@_href"]) {
+            link = link["@_href"];
+          } else if (typeof link !== "string") {
+            link = entry.id || source.homepage;
+          }
 
           const publishedAt = entry.published || entry.updated || new Date().toISOString();
           const slug = slugify(cleanTitle) || `arxiv-${Date.now().toString(36)}-${i}`;
@@ -269,7 +329,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
         }).filter(Boolean);
       }
 
-      // Handle standard RSS feeds (TechCrunch, HuggingFace, Verge AI)
+      // Handle standard RSS & Atom feeds (TechCrunch, DeepMind, OpenAI, HuggingFace, SiliconANGLE)
       let rawItems: any[] = [];
       if (parsed?.rss?.channel?.item) {
         rawItems = Array.isArray(parsed.rss.channel.item)
@@ -282,18 +342,21 @@ export async function fetchLiveNews(): Promise<Article[]> {
       }
 
       return rawItems.slice(0, 10).map((item, idx) => {
-        const rawTitle = typeof item.title === "string" ? item.title : item.title?.["#text"] || "News Update";
+        const rawTitle = typeof item.title === "string" ? item.title : item.title?.["#text"] || item.title?.["@_text"] || item.title?.text || "News Update";
         const cleanTitle = cleanHtml(rawTitle).replace(/^\[.*?\]\s*/, "");
         const rawDesc = item.description || item.summary || item["content:encoded"] || item.content || "";
-        const cleanDesc = cleanHtml(typeof rawDesc === "string" ? rawDesc : rawDesc?.["#text"] || "");
+        const cleanDesc = cleanHtml(typeof rawDesc === "string" ? rawDesc : rawDesc?.["#text"] || rawDesc?.["@_text"] || "");
 
         // STRICT AI RELEVANCE CHECK: reject keyboards, TVs, gaming discounts, non-AI content
-        if (!isAiRelevant(cleanTitle, cleanDesc)) {
+        if (!isAiRelevant(cleanTitle, cleanDesc, source.name)) {
           return null;
         }
 
         let link = item.link;
-        if (typeof link === "object" && link?.["@_href"]) {
+        if (Array.isArray(link)) {
+          const alt = link.find((l: any) => l["@_rel"] === "alternate" || !l["@_rel"]);
+          link = alt?.["@_href"] || link[0]?.["@_href"] || source.homepage;
+        } else if (typeof link === "object" && link?.["@_href"]) {
           link = link["@_href"];
         } else if (typeof link !== "string") {
           link = source.homepage;
@@ -308,9 +371,13 @@ export async function fetchLiveNews(): Promise<Article[]> {
           }
         }
 
-        const category = detectCategory(cleanTitle, cleanDesc, source.defaultCategory);
-        const summary = cleanDesc.slice(0, 260) + (cleanDesc.length > 260 ? "..." : "");
-        const readingTimeMinutes = Math.max(2, Math.ceil(cleanDesc.split(" ").length / 180));
+        const finalContent = cleanDesc.length > 20
+          ? cleanDesc
+          : `${cleanTitle}. Continuous intelligence monitoring and analysis conducted by the ${source.name} desk for aitalky.`;
+
+        const category = detectCategory(cleanTitle, finalContent, source.defaultCategory);
+        const summary = finalContent.slice(0, 260) + (finalContent.length > 260 ? "..." : "");
+        const readingTimeMinutes = Math.max(2, Math.ceil(finalContent.split(" ").length / 180));
         const slug = slugify(cleanTitle) || `news-${Date.now().toString(36)}-${idx}`;
         const author = item["dc:creator"] || item.author?.name || `${source.name} Staff`;
 
@@ -319,7 +386,7 @@ export async function fetchLiveNews(): Promise<Article[]> {
           slug,
           title: cleanTitle,
           summary: summary || "Read the complete in-depth coverage on the original source publication.",
-          content: cleanDesc || summary,
+          content: finalContent,
           source: source.name,
           sourceUrl: source.homepage,
           url: link,

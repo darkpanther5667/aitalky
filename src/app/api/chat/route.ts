@@ -8,13 +8,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // Check if an AI key is available in environment (e.g. GEMINI_API_KEY or OPENAI_API_KEY)
+    // Check if an AI key is available in environment (e.g. GEMINI_API_KEY)
     const geminiKey = process.env.GEMINI_API_KEY;
     if (geminiKey) {
-      try {
-        const geminiRes = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
-          {
+      const candidateModels = [
+        "gemini-flash-lite-latest",
+        "gemini-3.5-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-flash-latest",
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+          let geminiRes = await fetch(endpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -33,18 +40,43 @@ Provide a concise, crisp, intellectually rigorous answer in 2-3 short paragraphs
                 },
               ],
             }),
-          }
-        );
+          });
 
-        if (geminiRes.ok) {
-          const geminiData = await geminiRes.json();
-          const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (reply) {
-            return NextResponse.json({ reply });
+          // Handle temporary rate limits
+          if (geminiRes.status === 429 || geminiRes.status === 503) {
+            await new Promise((r) => setTimeout(r, 1000));
+            geminiRes = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      {
+                        text: `You are aitalky, a sharp, ultra-minimalist, high-signal AI news analyst and editor.
+Context article: "${articleTitle || "General AI Update"}"
+Content: "${articleContext || ""}"
+Reader Question / Intent: "${prompt}"
+
+Provide a concise, crisp, intellectually rigorous answer in 2-3 short paragraphs or bullet points. Avoid filler or corporate pleasantries. Get straight to the technical insight, industry impact, or trade-offs.`,
+                      },
+                    ],
+                  },
+                ],
+              }),
+            });
           }
+
+          if (geminiRes.ok) {
+            const geminiData = await geminiRes.json();
+            const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (reply) {
+              return NextResponse.json({ reply });
+            }
+          }
+        } catch (e) {
+          console.warn(`Chat call to model ${model} failed, attempting next model:`, e);
         }
-      } catch (e) {
-        console.warn("Gemini call failed, using intelligent built-in analyst engine", e);
       }
     }
 
