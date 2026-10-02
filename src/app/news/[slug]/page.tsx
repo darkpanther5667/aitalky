@@ -9,6 +9,7 @@ import { ArrowLeft, Clock, Calendar, ExternalLink } from "lucide-react";
 import { ArticleAudioPlayer } from "@/components/ArticleAudioPlayer";
 import { ArticleActions } from "@/components/ArticleActions";
 import { Logo } from "@/components/Logo";
+import { EditorialFooter } from "@/components/EditorialFooter";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -404,13 +405,8 @@ export default async function NewsArticlePage({ params }: PageProps) {
           )}
         </main>
 
-        {/* Clean Footer */}
-        <footer className="border-t border-[#e8e8e6] dark:border-[#222220] py-8 text-center text-xs text-[#9ca3af]">
-          <Link href="/" className="font-serif font-bold text-base text-[#141413] dark:text-[#f3f3f0] hover:underline">
-            aitalky
-          </Link>
-          <p className="mt-1">Independent Artificial Intelligence Journalism</p>
-        </footer>
+        {/* Global Editorial & Legal Footer */}
+        <EditorialFooter />
       </article>
     </>
   );

@@ -9,6 +9,7 @@ import { EditorialSidebar } from "@/components/EditorialSidebar";
 import { StoryReaderModal } from "@/components/StoryReaderModal";
 import { TalkyAssistantModal } from "@/components/TalkyAssistantModal";
 import { AudioPlayerBar } from "@/components/AudioPlayerBar";
+import { EditorialFooter } from "@/components/EditorialFooter";
 import { speechManager } from "@/lib/speech";
 import { ArrowRight, Volume2, Bookmark, Sparkles, RotateCw } from "lucide-react";
 
@@ -353,61 +354,8 @@ export default function HomePage() {
         onStop={() => setIsAudioPlaying(false)}
       />
 
-      {/* Clean Editorial Footer */}
-      <footer className="border-t border-[#e8e8e6] dark:border-[#222220] py-14 mt-16 bg-[#f4f4f2]/40 dark:bg-[#141412]/40 text-xs text-[#6b7280] dark:text-[#9ca3af]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-          <div>
-            <span className="text-2xl font-serif font-bold text-[#141413] dark:text-[#f3f3f0] block mb-2">
-              aitalky
-            </span>
-            <p className="max-w-sm text-xs leading-relaxed text-[#4b5563] dark:text-[#9ca3af]">
-              An independent news publication dedicated to clear, thoughtful reporting on artificial intelligence, computing, and culture.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-10 text-xs">
-            <div>
-              <span className="font-semibold text-black dark:text-white block mb-2 uppercase tracking-wider text-[11px]">
-                Sections
-              </span>
-              <ul className="space-y-1.5">
-                <li><a href="#" className="hover:underline">Industry &amp; Startups</a></li>
-                <li><a href="#" className="hover:underline">Research &amp; Science</a></li>
-                <li><a href="#" className="hover:underline">Products &amp; Tools</a></li>
-                <li><a href="#" className="hover:underline">Culture &amp; Ethics</a></li>
-                <li><a href="#" className="hover:underline">Policy &amp; Law</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <span className="font-semibold text-black dark:text-white block mb-2 uppercase tracking-wider text-[11px]">
-                Editions
-              </span>
-              <ul className="space-y-1.5">
-                <li><a href="#" className="hover:underline">Daily Audio Briefing</a></li>
-                <li><a href="#" className="hover:underline">Weekly Newsletter</a></li>
-                <li><a href="/api/news" className="hover:underline">RSS Feed</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <span className="font-semibold text-black dark:text-white block mb-2 uppercase tracking-wider text-[11px]">
-                About
-              </span>
-              <ul className="space-y-1.5">
-                <li><a href="#" className="hover:underline">Editorial Standards</a></li>
-                <li><a href="#" className="hover:underline">Masthead &amp; Staff</a></li>
-                <li><a href="#" className="hover:underline">Contact the Newsroom</a></li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 mt-8 border-t border-[#e8e8e6] dark:border-[#222220] flex flex-col sm:flex-row items-center justify-between text-[11px] text-[#9ca3af]">
-          <span>&copy; {new Date().getFullYear()} aitalky Media Group. All rights reserved.</span>
-          <span className="mt-2 sm:mt-0">Independent Journalism • Clean, Minimal &amp; Human</span>
-        </div>
-      </footer>
+      {/* Editorial Footer with Legal Compliance */}
+      <EditorialFooter />
     </div>
   );
 }
