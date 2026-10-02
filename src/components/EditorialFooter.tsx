@@ -59,6 +59,11 @@ export function EditorialFooter() {
                   Daily Brief Synthesis ↗
                 </Link>
               </li>
+              <li>
+                <Link href="/models" className="text-emerald-700 dark:text-emerald-400 font-semibold hover:underline">
+                  AI Models Directory (30+) ↗
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -102,6 +107,11 @@ export function EditorialFooter() {
               Machine & Open Data
             </span>
             <ul className="space-y-2">
+              <li>
+                <Link href="/models" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
+                  /models (Frontier Index)
+                </Link>
+              </li>
               <li>
                 <a href="/llms.txt" target="_blank" className="hover:text-black dark:hover:text-white transition font-mono text-[11px]">
                   /llms.txt (AI Directory)

@@ -21,6 +21,7 @@ export async function GET() {
 > Independent, minimal news publication covering artificial intelligence research, industry, models, and policy. Updated every 30 minutes.
 
 - Canonical URL: ${siteUrl}
+- AI Models Directory: ${siteUrl}/models
 - Full Feed for LLMs: ${siteUrl}/llms-full.txt
 - JSON API Feed: ${siteUrl}/api/news
 - Sync Cadence: Every 30 minutes

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { Category } from "@/types/news";
 import { Search, Sun, Moon, Bookmark, X, Volume2, User, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -240,6 +241,17 @@ export function EditorialHeader({
               </button>
             );
           })}
+
+          <span className="text-neutral-300 dark:text-neutral-700 hidden sm:inline">•</span>
+          <Link
+            href="/models"
+            className="text-amber-700 dark:text-amber-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer py-1 shrink-0 inline-flex items-center gap-1 font-semibold"
+          >
+            <span>AI Models</span>
+            <span className="text-[10px] bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 px-1.5 py-0.2 rounded font-mono">
+              Directory
+            </span>
+          </Link>
         </div>
       </nav>
 
